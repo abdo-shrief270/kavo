@@ -1,0 +1,11 @@
+packages:
+  - 'apps/storefront'
+  - 'apps/dashboard'
+  - 'apps/admin'
+  - 'packages/*'
+
+# pnpm 10 blocks lifecycle scripts by default. These two need theirs to place
+# platform binaries; without them every Vite build fails at esbuild.
+onlyBuiltDependencies:
+  - esbuild
+  - vue-demi
