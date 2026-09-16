@@ -39,6 +39,49 @@ final class UsageMeter
         return $this->persistedBase($tenant, $metric) + $value;
     }
 
+    /**
+     * Return allowance for a stock metric. Floors at zero: a double release
+     * should leave the counter wrong-but-harmless rather than negative, which
+     * would silently grant free headroom.
+     */
+    public function decrement(Tenant $tenant, string $metric, int $amount = 1): int
+    {
+        $current = $this->current($tenant, $metric);
+        $effective = min($amount, $current);
+
+        if ($effective <= 0) {
+            return $current;
+        }
+
+        $key = $this->key($tenant, $metric);
+        $buffered = (int) ($this->connection()->get($key) ?? 0);
+
+        // Take it out of the Redis buffer first, and only reach into the
+        // persisted total for whatever the buffer could not cover.
+        $fromBuffer = min($effective, $buffered);
+
+        if ($fromBuffer > 0) {
+            $this->connection()->decrby($key, $fromBuffer);
+        }
+
+        $fromPersisted = $effective - $fromBuffer;
+
+        if ($fromPersisted > 0) {
+            DB::table('usage_counters')
+                ->where('tenant_id', $tenant->getKey())
+                ->where('metric_key', $metric)
+                ->where('period_start', $this->periodStart())
+                ->update([
+                    'value' => DB::raw("GREATEST(0, value - {$fromPersisted})"),
+                    'updated_at' => now(),
+                ]);
+        }
+
+        $this->connection()->sadd($this->dirtySetKey(), [$tenant->getKey().':'.$metric]);
+
+        return $current - $effective;
+    }
+
     public function current(Tenant $tenant, string $metric): int
     {
         $buffered = (int) ($this->connection()->get($this->key($tenant, $metric)) ?? 0);

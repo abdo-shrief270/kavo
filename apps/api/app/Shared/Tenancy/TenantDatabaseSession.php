@@ -33,6 +33,50 @@ final readonly class TenantDatabaseSession
         $this->apply('');
     }
 
+    /**
+     * Bind a tenant for the duration of a callback, then restore whatever was
+     * bound before.
+     *
+     * Save-and-restore rather than bind-then-clear, because callers cannot
+     * assume they are the outermost one. A queued listener runs on a worker
+     * with nothing bound, but the same listener running inline — a sync queue,
+     * or a synchronous dispatch — sits inside a request that already has a
+     * tenant bound, and clearing it there strands the rest of that request
+     * with no tenant. The symptom is not a clean failure: Postgres aborts the
+     * surrounding transaction and every later statement fails.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public function runBound(int $tenantId, callable $callback): mixed
+    {
+        $previous = $this->currentValue();
+
+        $this->bind($tenantId);
+
+        try {
+            return $callback();
+        } finally {
+            $this->apply($previous ?? '');
+        }
+    }
+
+    /** The GUC as Postgres currently has it, or null outside Postgres. */
+    private function currentValue(): ?string
+    {
+        $connection = $this->db->connection();
+
+        if ($connection->getDriverName() !== 'pgsql') {
+            return null;
+        }
+
+        $value = $connection->scalar('SELECT current_setting(?, true)', [config('kavo.tenancy.guc')]);
+
+        return $value === null ? '' : (string) $value;
+    }
+
     private function apply(string $value): void
     {
         $connection = $this->db->connection();

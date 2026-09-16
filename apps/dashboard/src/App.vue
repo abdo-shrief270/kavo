@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router'
+import NotificationBell from './components/NotificationBell.vue'
 import { useAuthStore } from './stores/auth'
 
 const auth = useAuthStore()
@@ -26,8 +27,11 @@ async function signOut() {
       </select>
       <div v-else class="shell__tenant-name">{{ auth.currentTenant?.name }}</div>
 
+      <NotificationBell />
+
       <nav>
         <RouterLink to="/">Overview</RouterLink>
+        <RouterLink to="/media">Media</RouterLink>
         <RouterLink to="/domains">Domains</RouterLink>
         <RouterLink to="/webhooks">Webhooks</RouterLink>
       </nav>

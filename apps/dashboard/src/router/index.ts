@@ -7,6 +7,7 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { guest: true } },
     { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { guest: true } },
     { path: '/', name: 'overview', component: () => import('../views/OverviewView.vue') },
+    { path: '/media', name: 'media', component: () => import('../views/MediaView.vue') },
     { path: '/domains', name: 'domains', component: () => import('../views/DomainsView.vue') },
     { path: '/webhooks', name: 'webhooks', component: () => import('../views/WebhooksView.vue') },
   ],

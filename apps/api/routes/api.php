@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
 use App\Modules\Platform\Identity\Http\Controllers\AuthController;
 use App\Modules\Platform\Identity\Http\Controllers\TenantController;
+use App\Modules\Platform\Media\Http\Controllers\MediaController;
+use App\Modules\Platform\Notifications\Http\Controllers\NotificationController;
 use App\Modules\Platform\Themes\Http\Controllers\ThemeSettingsController;
 use App\Modules\Platform\Webhooks\Http\Controllers\WebhookSubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +35,18 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::post('domains', [DomainController::class, 'store'])->name('domains.store');
     Route::post('domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
     Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
+    // Metered: uploads are charged against storage_mb before the file is
+    // written, and deleting one returns the allowance.
+    Route::get('media', [MediaController::class, 'index'])->name('media.index');
+    Route::post('media', [MediaController::class, 'store'])->name('media.store');
+    Route::delete('media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
+
+    // The HTTP fallback behind the bell. Reverb makes it instant; this makes
+    // it reliable.
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
     Route::get('themes', [ThemeSettingsController::class, 'index'])->name('themes.index');
     Route::put('themes', [ThemeSettingsController::class, 'update'])->name('themes.update');

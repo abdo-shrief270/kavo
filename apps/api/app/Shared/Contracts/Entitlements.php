@@ -22,6 +22,20 @@ interface Entitlements
     /** Meter usage. The result says whether the caller may proceed. */
     public function consume(Tenant $tenant, string $metric, int $amount = 1): ConsumeResult;
 
+    /**
+     * Give allowance back.
+     *
+     * Metrics come in two shapes and the distinction matters. A *flow* metric
+     * such as `orders` counts events in a period and never decreases —
+     * cancelling an order does not un-place it. A *stock* metric such as
+     * `storage_mb` measures what is currently held, so deleting a file must
+     * return the allowance or the tenant is billed forever for bytes that no
+     * longer exist.
+     *
+     * Only call this for stock metrics.
+     */
+    public function release(Tenant $tenant, string $metric, int $amount = 1): void;
+
     /** Remaining allowance, or null when the plan grants unlimited use. */
     public function remaining(Tenant $tenant, string $metric): ?int;
 

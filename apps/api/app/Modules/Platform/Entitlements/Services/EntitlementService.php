@@ -68,6 +68,11 @@ final class EntitlementService implements Entitlements
             : ConsumeResult::allowed($metric, $used, $limit, $behavior);
     }
 
+    public function release(Tenant $tenant, string $metric, int $amount = 1): void
+    {
+        $this->meter->decrement($tenant, $metric, $amount);
+    }
+
     public function remaining(Tenant $tenant, string $metric): ?int
     {
         $feature = $this->features($tenant)[$metric] ?? null;

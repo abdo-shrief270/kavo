@@ -28,11 +28,36 @@ export interface Paginated<T> {
   total: number
 }
 
+export interface QuotaDetail {
+  metric: string
+  used: number
+  limit: number | null
+  remaining: number | null
+  overage_behavior: string
+}
+
+export interface AppNotification {
+  id: string
+  type: string
+  data: {
+    type: string
+    metric?: string
+    threshold?: number
+    used?: number
+    limit?: number | null
+    at_limit?: boolean
+    message?: string
+  }
+  read_at: string | null
+  created_at: string
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
     readonly errors: Record<string, string[]> = {},
+    readonly quota?: QuotaDetail,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -41,6 +66,15 @@ export class ApiError extends Error {
   /** Laravel returns 422 with a field-keyed bag; forms render it directly. */
   get isValidation(): boolean {
     return this.status === 422
+  }
+
+  /**
+   * 402, not 403. The tenant *may* do this — on a larger plan — so the UI
+   * shows an upgrade prompt rather than an error. `quota` carries the detail
+   * needed to say which limit and by how much.
+   */
+  get isQuotaExceeded(): boolean {
+    return this.status === 402
   }
 
   get isUnauthenticated(): boolean {

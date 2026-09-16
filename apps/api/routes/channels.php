@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Modules\Platform\Identity\Models\Tenant;
+use App\Modules\Platform\Realtime\Channels\ChannelRegistry;
 use Illuminate\Support\Facades\Broadcast;
 
 /**
@@ -14,18 +15,18 @@ use Illuminate\Support\Facades\Broadcast;
  * channel and receive its events in real time. Every callback below checks
  * membership.
  */
-Broadcast::channel('tenant.{tenantId}', function (User $user, string $tenantId): bool {
+Broadcast::channel(ChannelRegistry::tenantPattern(), function (User $user, string $tenantId): bool {
     $tenant = Tenant::query()->find($tenantId);
 
     return $tenant !== null && $user->belongsToTenant($tenant);
 });
 
-Broadcast::channel('user.{userId}', function (User $user, string $userId): bool {
+Broadcast::channel(ChannelRegistry::userPattern(), function (User $user, string $userId): bool {
     return (int) $user->getKey() === (int) $userId;
 });
 
 /** Presence channel for team collaboration inside one tenant. */
-Broadcast::channel('presence-tenant.{tenantId}', function (User $user, string $tenantId): ?array {
+Broadcast::channel(ChannelRegistry::tenantPresencePattern(), function (User $user, string $tenantId): ?array {
     $tenant = Tenant::query()->find($tenantId);
 
     if ($tenant === null || ! $user->belongsToTenant($tenant)) {
@@ -36,6 +37,6 @@ Broadcast::channel('presence-tenant.{tenantId}', function (User $user, string $t
 });
 
 /** Platform staff only — never scoped to a tenant. */
-Broadcast::channel('platform', function (User $user): bool {
+Broadcast::channel(ChannelRegistry::platform(), function (User $user): bool {
     return (bool) $user->is_platform_admin;
 });

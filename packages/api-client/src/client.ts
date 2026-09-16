@@ -77,7 +77,12 @@ export function createClient(options: ClientOptions) {
 
     if (response.status === 401) options.onUnauthenticated?.()
 
-    throw new ApiError(response.status, payload.message ?? response.statusText, payload.errors ?? {})
+    throw new ApiError(
+      response.status,
+      payload.message ?? response.statusText,
+      payload.errors ?? {},
+      payload.quota,
+    )
   }
 
   return {

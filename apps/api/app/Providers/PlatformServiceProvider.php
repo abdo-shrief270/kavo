@@ -9,11 +9,15 @@ use App\Modules\Platform\Analytics\Console\FlushAnalyticsBuffer;
 use App\Modules\Platform\Analytics\Services\BufferedAnalyticsIngestor;
 use App\Modules\Platform\Entitlements\Console\FlushUsageCounters;
 use App\Modules\Platform\Entitlements\Services\EntitlementService;
+use App\Modules\Platform\Notifications\Channels\TenantDatabaseChannel;
+use App\Modules\Platform\Notifications\Channels\WhatsAppChannel;
 use App\Modules\Platform\Notifications\Gateways\BeOnGateway;
 use App\Modules\Platform\Notifications\Gateways\LogWhatsAppGateway;
+use App\Modules\Platform\Notifications\Listeners\SendQuotaThresholdAlert;
 use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
 use App\Shared\Contracts\WhatsAppGateway;
+use App\Shared\Events\QuotaThresholdReached;
 use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantDatabaseSession;
 use Illuminate\Console\Scheduling\Schedule;
@@ -23,6 +27,7 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\RequestTerminated;
 
@@ -73,6 +78,8 @@ final class PlatformServiceProvider extends ServiceProvider
         $this->resetTenantStateBetweenJobs();
         $this->logSlowQueries();
         $this->resolveModuleFactories();
+        $this->registerNotificationChannels();
+        $this->registerListeners();
         $this->registerCommands();
         $this->registerSchedule();
     }
@@ -88,6 +95,24 @@ final class PlatformServiceProvider extends ServiceProvider
         Factory::guessFactoryNamesUsing(
             static fn (string $model): string => 'Database\\Factories\\'.class_basename($model).'Factory'
         );
+    }
+
+    /**
+     * Registers the WhatsApp channel under the name notifications use in
+     * their via() list.
+     */
+    private function registerNotificationChannels(): void
+    {
+        Notification::extend('whatsapp', fn ($app) => $app->make(WhatsAppChannel::class));
+
+        // Replaces the framework channel so in-app notifications carry a
+        // tenant_id and survive their own RLS policy.
+        Notification::extend('database', fn ($app) => $app->make(TenantDatabaseChannel::class));
+    }
+
+    private function registerListeners(): void
+    {
+        Event::listen(QuotaThresholdReached::class, SendQuotaThresholdAlert::class);
     }
 
     private function registerCommands(): void
@@ -135,12 +160,23 @@ final class PlatformServiceProvider extends ServiceProvider
     }
 
     /**
-     * Queue workers are long-lived for the same reason. A job that inherits
-     * the previous job's tenant would write rows under the wrong owner.
+     * Queue workers are long-lived for the same reason, so a job must not
+     * inherit the tenant the previous job happened to leave behind.
+     *
+     * The `sync` connection is deliberately excluded. A sync job runs inside
+     * whatever dispatched it — a web request that has already bound a tenant —
+     * and tearing that state down mid-request strands the rest of it with no
+     * tenant. Postgres then aborts the surrounding transaction and every later
+     * statement fails, which presents as an unrelated 500 far from the cause.
+     * The dispatcher owns that state; only a real worker should clear it.
      */
     private function resetTenantStateBetweenJobs(): void
     {
-        $reset = function (): void {
+        $reset = function (JobProcessed|JobFailed $event): void {
+            if ($event->connectionName === 'sync') {
+                return;
+            }
+
             app(TenantDatabaseSession::class)->clear();
             app(TenantContext::class)->forget();
         };
