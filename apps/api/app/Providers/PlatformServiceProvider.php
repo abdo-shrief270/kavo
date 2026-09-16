@@ -14,6 +14,8 @@ use App\Modules\Platform\Notifications\Channels\WhatsAppChannel;
 use App\Modules\Platform\Notifications\Gateways\BeOnGateway;
 use App\Modules\Platform\Notifications\Gateways\LogWhatsAppGateway;
 use App\Modules\Platform\Notifications\Listeners\SendQuotaThresholdAlert;
+use App\Modules\Platform\Observability\Console\SlowQueries;
+use App\Modules\Platform\Observability\Services\RequestContext;
 use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
 use App\Shared\Contracts\WhatsAppGateway;
@@ -39,6 +41,10 @@ final class PlatformServiceProvider extends ServiceProvider
         // request, and a singleton here would leak one tenant into the next.
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->scoped(TenantDatabaseSession::class);
+
+        // Scoped for the same reason TenantContext is: under Octane a shared
+        // correlation id would splice two requests into one trace.
+        $this->app->scoped(RequestContext::class, fn () => new RequestContext);
 
         $this->app->singleton(Entitlements::class, EntitlementService::class);
         $this->app->singleton(AnalyticsIngestor::class, BufferedAnalyticsIngestor::class);
@@ -125,6 +131,7 @@ final class PlatformServiceProvider extends ServiceProvider
             FlushUsageCounters::class,
             FlushAnalyticsBuffer::class,
             EnsureAnalyticsPartitions::class,
+            SlowQueries::class,
         ]);
     }
 
@@ -156,6 +163,7 @@ final class PlatformServiceProvider extends ServiceProvider
         Event::listen(RequestTerminated::class, function (): void {
             app(TenantDatabaseSession::class)->clear();
             app(TenantContext::class)->forget();
+            app(RequestContext::class)->forget();
         });
     }
 
@@ -179,6 +187,7 @@ final class PlatformServiceProvider extends ServiceProvider
 
             app(TenantDatabaseSession::class)->clear();
             app(TenantContext::class)->forget();
+            app(RequestContext::class)->forget();
         };
 
         Event::listen(JobProcessed::class, $reset);

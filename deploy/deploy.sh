@@ -62,6 +62,13 @@ log "Migrating (expand/contract only)"
 cd "${RELEASE_PATH}/apps/api"
 php artisan migrate --force --database=pgsql_owner
 
+# Tags every error report and log line with the commit that produced it.
+export APP_RELEASE
+APP_RELEASE="$(git -C "$RELEASE_PATH" rev-parse HEAD)"
+grep -q '^APP_RELEASE=' "${DEPLOY_PATH}/shared/.env" \
+  && sed -i "s|^APP_RELEASE=.*|APP_RELEASE=${APP_RELEASE}|" "${DEPLOY_PATH}/shared/.env" \
+  || echo "APP_RELEASE=${APP_RELEASE}" >> "${DEPLOY_PATH}/shared/.env"
+
 log "Warming caches"
 php artisan config:cache
 php artisan route:cache

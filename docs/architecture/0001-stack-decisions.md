@@ -571,3 +571,57 @@ PHPStan and Deptrac are wired into CI but their packages would not install
 here, so they are unverified until the first CI run; and no live BeOn or
 Paymob credentials have been exercised — both run through their logging and
 sandbox paths.
+
+### A7. Observability, implemented
+
+§9 is now built rather than planned.
+
+**Correlation.** A `TracksRequestContext` middleware runs first in the global
+stack, so anything logged or reported after it — including failures in the
+middleware that follows — carries a request id. It is echoed back as
+`X-Request-Id` so a user reporting a problem can quote an id that finds the
+exact request. An inbound id is honoured only from a trusted proxy: accepting
+a client-supplied one would let anyone collide with or poison another
+request's trace. It survives the hop from the storefront's SSR server into the
+API, so one page render produces one trace rather than two unrelated sets of
+logs.
+
+**Structured logs.** Every channel taps a formatter that emits JSON and pushes
+a processor stamping `request_id`, `tenant_id`, `product`, `release`,
+`environment` and `module` onto each line. In a shared-schema multi-tenant
+system a line without a tenant is close to useless — "checkout failed" is a
+support ticket, "checkout failed for tenant 41 on POST /api/orders in release
+abc123" is a bug report. The processor never throws: a logger that failed
+would hide the very error it was asked to record.
+
+**Sentry**, one project for all four surfaces (`dashboard`, `admin`,
+`storefront`, `storefront-ssr`, `webhooks`, `internal`), tagged rather than
+split — an error that starts in the API and surfaces in the browser is one
+incident. `send_default_pii` is off and only a user id and staff flag are
+attached: request bodies, cookies and emails are merchant and shopper data we
+have no need to ship to a third party to read a stack trace. The frontends
+drop 401/402/403/419 before sending, because a plan limit or an expired
+session is an answer, not a fault. `release` is the git SHA, written into the
+shared `.env` by the deploy script, so backend and frontend issues trace to
+the same deploy.
+
+**Postgres.** `deploy/sql/02-observability.sql` installs `pg_stat_statements`
+and documents the `postgresql.conf` entries for `log_min_duration_statement`
+and `auto_explain`. This is done at the database rather than only in the
+application because an app-level listener sees only queries the app made, and
+only while the app is healthy. `kavo:slow-queries` surfaces the results,
+ordered by *total* time by default: a 5 ms query run two million times costs
+more than a 2-second report run once a day.
+
+**One defect worth recording**, because the class of it will recur. The log
+tap type-hinted `Monolog\Logger`, but Laravel hands a tap its own
+`Illuminate\Log\Logger` wrapper. The tap therefore never ran — silently. No
+exception, no warning; logs simply kept their default format while a unit test
+of the processor passed. It was only caught by reading an actual log line at
+runtime. The fix added an integration test that resolves a real channel and
+asserts the emitted bytes are JSON, rather than testing the processor in
+isolation.
+
+**Still outstanding here:** `opcodesio/log-viewer` is not installed (its
+package would not download in the build environment), and log shipping to
+Loki stays deferred per §9 until there is production traffic worth watching.

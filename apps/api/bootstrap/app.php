@@ -3,6 +3,7 @@
 use App\Modules\Platform\Entitlements\Http\Middleware\EnforceQuota;
 use App\Modules\Platform\Identity\Http\Middleware\EnsurePlatformAdmin;
 use App\Modules\Platform\Identity\Http\Middleware\ResolveTenant;
+use App\Modules\Platform\Observability\Http\Middleware\TracksRequestContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -39,6 +40,11 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // First in the global stack: everything logged or reported after this
+        // point carries a correlation id, including failures raised by the
+        // middleware that follows it.
+        $middleware->prepend(TracksRequestContext::class);
+
         // Adds EnsureFrontendRequestsAreStateful to the api group. Requests
         // from SANCTUM_STATEFUL_DOMAINS get the session (and CSRF); anything
         // else falls through to bearer-token auth. Registering it twice —

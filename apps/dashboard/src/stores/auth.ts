@@ -1,7 +1,8 @@
 import type { AuthUser, TenantSummary } from '@kavo/api-client'
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { api } from '../api'
+import { setSentryTenant, setSentryUser } from '../sentry'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -55,6 +56,13 @@ export const useAuthStore = defineStore('auth', () => {
     activeSlug.value = null
     localStorage.removeItem('kavo:tenant')
   }
+
+  // Keeps error reports tagged with the workspace they came from, including
+  // after a workspace switch.
+  watch([user, currentTenant], () => {
+    setSentryUser(user.value ? { id: user.value.id, is_platform_admin: user.value.is_platform_admin } : null)
+    setSentryTenant(currentTenant.value)
+  })
 
   return { user, ready, currentTenant, isAuthenticated, refresh, login, register, logout, selectTenant, clear }
 })

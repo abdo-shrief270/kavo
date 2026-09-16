@@ -1,7 +1,8 @@
 import type { AuthUser } from '@kavo/api-client'
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { api } from '../api'
+import { setSentryUser } from '../sentry'
 
 export const useAdminStore = defineStore('admin', () => {
   const user = ref<AuthUser | null>(null)
@@ -34,6 +35,10 @@ export const useAdminStore = defineStore('admin', () => {
   function clear() {
     user.value = null
   }
+
+  watch(user, () => {
+    setSentryUser(user.value ? { id: user.value.id, is_platform_admin: user.value.is_platform_admin } : null)
+  })
 
   return { user, ready, isStaff, refresh, login, logout, clear }
 })

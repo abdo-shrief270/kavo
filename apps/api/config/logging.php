@@ -1,6 +1,6 @@
 <?php
 
-use Monolog\Formatter\JsonFormatter;
+use App\Modules\Platform\Observability\Logging\JsonLogFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -64,12 +64,16 @@ return [
             'path' => storage_path('logs/slow.log'),
             'level' => 'debug',
             'days' => 14,
-            'formatter' => JsonFormatter::class,
+            // Same tap as the other channels, so a slow-query line carries
+            // the tenant and route that produced it — which is the entire
+            // point of logging it separately.
+            'tap' => [JsonLogFormatter::class],
             'replace_placeholders' => true,
         ],
 
         'single' => [
             'driver' => 'single',
+            'tap' => [JsonLogFormatter::class],
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
@@ -77,6 +81,7 @@ return [
 
         'daily' => [
             'driver' => 'daily',
+            'tap' => [JsonLogFormatter::class],
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => env('LOG_DAILY_DAYS', 14),

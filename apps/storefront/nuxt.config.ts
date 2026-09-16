@@ -6,7 +6,20 @@ export default defineNuxtConfig({
     // Self-hosts font files, removing an external round trip on first paint.
     // Worth real milliseconds on MENA latency.
     '@nuxt/fonts',
+    // Covers both halves of SSR: the Nitro server and the browser bundle.
+    // Without it a server-side render error never leaves the box.
+    '@sentry/nuxt/module',
   ],
+
+  sentry: {
+    sourceMapsUploadOptions: {
+      // Only uploaded when an auth token is present, so a local or CI build
+      // without credentials still succeeds instead of failing at the end.
+      enabled: Boolean(process.env.SENTRY_AUTH_TOKEN),
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+    },
+  },
 
   runtimeConfig: {
     // Server-side only. The storefront talks to the API over the internal
@@ -15,6 +28,12 @@ export default defineNuxtConfig({
     public: {
       // Used by the browser for client-side navigation and Echo.
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
+      sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
+        environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'local',
+        release: process.env.NUXT_PUBLIC_APP_RELEASE || '',
+        tracesSampleRate: Number(process.env.NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || 0.1),
+      },
       reverb: {
         key: process.env.NUXT_PUBLIC_REVERB_KEY || '',
         host: process.env.NUXT_PUBLIC_REVERB_HOST || 'localhost',
