@@ -18,8 +18,10 @@ final class AuditLogController
 {
     public function index(Request $request): JsonResponse
     {
-        $logs = DB::connection(config('kavo.tenancy.owner_connection'))
-            ->table('audit_logs')
+        // The ordinary application connection. In platform scope no tenant is
+        // bound, and the audit_logs policy returns exactly the platform
+        // entries — no bypass and no privileged connection required.
+        $logs = DB::table('audit_logs')
             ->when($request->integer('tenant_id'), fn ($q, int $id) => $q->where('tenant_id', $id))
             ->when($request->string('action')->toString(), fn ($q, string $a) => $q->where('action', 'like', $a.'%'))
             ->when($request->integer('user_id'), fn ($q, int $id) => $q->where('user_id', $id))

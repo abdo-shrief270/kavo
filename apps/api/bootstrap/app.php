@@ -7,7 +7,6 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,15 +38,15 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Adds EnsureFrontendRequestsAreStateful to the api group. Requests
+        // from SANCTUM_STATEFUL_DOMAINS get the session (and CSRF); anything
+        // else falls through to bearer-token auth. Registering it twice —
+        // here and again via api(prepend:) — runs the session stack twice.
         $middleware->statefulApi();
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'platform.admin' => EnsurePlatformAdmin::class,
-        ]);
-
-        $middleware->api(prepend: [
-            EnsureFrontendRequestsAreStateful::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

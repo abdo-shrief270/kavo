@@ -51,6 +51,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Laravel's test client sends from localhost. Listing it here means
+             the tests exercise the real stateful-session path the SPAs use,
+             rather than silently falling through to token auth. -->
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

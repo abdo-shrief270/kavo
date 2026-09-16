@@ -42,6 +42,17 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        /*
+         | Used by every API route. Sanctum first tries the session cookie
+         | (how both SPAs authenticate, since they are first-party origins),
+         | and falls back to a bearer token for anything that is not a
+         | browser.
+         */
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*

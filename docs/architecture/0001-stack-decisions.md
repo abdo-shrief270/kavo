@@ -538,3 +538,36 @@ Octane and FrankenPHP are installed and configured per Change 1 but the
 application has not yet been run under them — that is the first task of the
 next slice, and the Octane-specific state teardown it requires is already
 implemented and tested.
+
+### A6. Exit-gate walk, verified
+
+The Phase 0 loop was run end to end against the running API, not merely
+asserted in tests. Verified in order: signup provisions a tenant with a plan
+and a trial; the quota engine reports correct per-metric entitlements; a
+custom domain issues a DNS challenge; the TLS ask endpoint refuses an
+unverified hostname (404) and a request with no token (403); the storefront
+config resolves by `Host` header and returns theme plus design tokens; a
+cross-tenant read via `X-Tenant` is refused (404); a merchant is refused the
+platform console (403); a platform admin reads cross-tenant metrics; and that
+read appears in the audit log with a null tenant.
+
+Four defects were found this way and none were reachable from below the HTTP
+layer: the `sanctum` guard was never defined, the stateful-session middleware
+was registered twice, `is_platform_admin` serialised as `null` rather than
+`false` on a freshly created user, and platform-scope audit writes were
+rejected by their own RLS policy. The audit policy is now asymmetric by
+design — a bound tenant sees only its own rows, an unbound (platform-scope)
+connection sees only platform rows — which also lets the super-admin audit
+view run on the ordinary application connection instead of a privileged one.
+
+`tests/Feature/AuthAndProvisioningTest.php` now covers this path so the same
+class of defect fails CI rather than a manual walk.
+
+**Not yet exercised**, and the first tasks of the next slice: the app has not
+been run under Octane/FrankenPHP (installed and configured, and the
+Octane-specific state teardown is implemented and tested); Reverb has not been
+started, so `/internal/health` reports `degraded` on that check by design;
+PHPStan and Deptrac are wired into CI but their packages would not install
+here, so they are unverified until the first CI run; and no live BeOn or
+Paymob credentials have been exercised — both run through their logging and
+sandbox paths.

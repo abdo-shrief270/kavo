@@ -61,7 +61,6 @@ return new class extends Migration
         'notification_deliveries',
         'webhook_subscriptions',
         'webhook_deliveries',
-        'audit_logs',
         'analytics_events',
     ];
 
@@ -74,15 +73,58 @@ return new class extends Migration
         foreach (self::TENANT_TABLES as $table) {
             $this->protect($table);
         }
+
+        $this->protectAuditLogs();
     }
 
     public function down(): void
     {
-        foreach (self::TENANT_TABLES as $table) {
+        foreach ([...self::TENANT_TABLES, 'audit_logs'] as $table) {
             DB::statement("DROP POLICY IF EXISTS tenant_isolation ON {$table}");
             DB::statement("ALTER TABLE {$table} NO FORCE ROW LEVEL SECURITY");
             DB::statement("ALTER TABLE {$table} DISABLE ROW LEVEL SECURITY");
         }
+    }
+
+    /**
+     * audit_logs needs a policy the other tables do not, because platform
+     * entries — staff reaching across tenants — carry no tenant_id at all.
+     *
+     * The rule is symmetric with the bound tenant:
+     *
+     *   a tenant IS bound   → that tenant's rows only. Platform entries stay
+     *                         hidden, so no tenant can see that staff looked,
+     *                         or infer other tenants from the trail.
+     *   no tenant bound     → platform entries only. This is what lets the
+     *                         super-admin console read the platform trail on
+     *                         the ordinary application connection.
+     *
+     * The trade-off, stated plainly: a connection that lost its tenant binding
+     * can read platform audit entries. That is a far narrower exposure than
+     * the alternatives — it reaches no tenant data of any kind — and the real
+     * gate is the platform.admin middleware. Writes are permitted for a null
+     * tenant so the audit trail stays on the caller's own connection and
+     * inside their transaction, rather than being written out-of-band.
+     */
+    private function protectAuditLogs(): void
+    {
+        $guc = config('kavo.tenancy.guc');
+
+        DB::statement('ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY');
+        DB::statement('ALTER TABLE audit_logs FORCE ROW LEVEL SECURITY');
+        DB::statement('DROP POLICY IF EXISTS tenant_isolation ON audit_logs');
+
+        DB::statement(<<<SQL
+            CREATE POLICY tenant_isolation ON audit_logs
+            USING (
+                tenant_id = NULLIF(current_setting('{$guc}', true), '')::bigint
+                OR (tenant_id IS NULL AND NULLIF(current_setting('{$guc}', true), '') IS NULL)
+            )
+            WITH CHECK (
+                tenant_id IS NULL
+                OR tenant_id = NULLIF(current_setting('{$guc}', true), '')::bigint
+            )
+        SQL);
     }
 
     private function protect(string $table): void

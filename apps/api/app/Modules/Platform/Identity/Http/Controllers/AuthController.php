@@ -44,7 +44,7 @@ final class AuthController
         );
 
         Auth::login($user);
-        $request->session()->regenerate();
+        $this->regenerateSession($request);
 
         return response()->json([
             'user' => $this->userPayload($user),
@@ -70,7 +70,7 @@ final class AuthController
         }
 
         Auth::login($user, $request->boolean('remember'));
-        $request->session()->regenerate();
+        $this->regenerateSession($request);
 
         return response()->json(['user' => $this->userPayload($user)]);
     }
@@ -78,8 +78,11 @@ final class AuthController
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Signed out.']);
     }
@@ -89,6 +92,22 @@ final class AuthController
         return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
+    /**
+     * Only browser requests from a stateful domain carry a session. A
+     * token-based client reaching these endpoints should not get a 500 for
+     * the absence of one.
+     */
+    private function regenerateSession(Request $request): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        // Rotates the session id on privilege change, which is what closes
+        // session fixation.
+        $request->session()->regenerate();
+    }
+
     /** @return array<string, mixed> */
     private function userPayload(User $user): array
     {
@@ -96,7 +115,11 @@ final class AuthController
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'is_platform_admin' => $user->is_platform_admin,
+            // Coerced rather than passed through: a freshly created user has
+            // not been read back from the database, so the column default has
+            // not populated the attribute and the cast yields null. The
+            // frontends branch on this, and null is not false.
+            'is_platform_admin' => (bool) $user->is_platform_admin,
             'active_tenant_id' => $user->active_tenant_id,
             'tenants' => $user->tenants()->get()->map(fn ($t): array => [
                 'id' => $t->id,
