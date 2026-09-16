@@ -1,5 +1,8 @@
 <?php
 
+use App\Modules\Platform\Billing\Payments\Gateways\FakeGateway;
+use App\Modules\Platform\Billing\Payments\Gateways\FawryGateway;
+use App\Modules\Platform\Billing\Payments\Gateways\PaymobGateway;
 use App\Modules\Platform\Webhooks\Verifiers\BeOnWebhookVerifier;
 use App\Modules\Platform\Webhooks\Verifiers\PaymobWebhookVerifier;
 
@@ -44,6 +47,33 @@ return [
         'flush_interval_seconds' => 60,
         'accuracy_critical' => ['orders'],
         'alert_thresholds' => [80, 100],
+    ],
+
+    'payments' => [
+        /*
+         | Which gateway serves which rail. Egypt needs two providers, not
+         | one: Paymob has the better API and covers cards, wallets and
+         | Apple/Google Pay, while Fawry is how a large share of the market
+         | actually pays. A rail with no gateway is simply not offered.
+         */
+        'rails' => [
+            'card' => env('KAVO_CARD_GATEWAY', 'fake'),
+            'wallet' => env('KAVO_WALLET_GATEWAY', 'fake'),
+            'reference' => env('KAVO_REFERENCE_GATEWAY', 'fake'),
+            'cod' => env('KAVO_COD_GATEWAY', 'fake'),
+        ],
+
+        'gateways' => [
+            'fake' => FakeGateway::class,
+            'paymob' => PaymobGateway::class,
+            'fawry' => FawryGateway::class,
+        ],
+
+        /*
+         | How long a customer has to pay an issued reference before the
+         | order is released. Fawry's own default is 72 hours.
+         */
+        'reference_expiry_hours' => (int) env('KAVO_REFERENCE_EXPIRY_HOURS', 72),
     ],
 
     'webhooks' => [

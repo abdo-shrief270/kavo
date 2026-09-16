@@ -625,3 +625,58 @@ isolation.
 **Still outstanding here:** `opcodesio/log-viewer` is not installed (its
 package would not download in the build environment), and log shipping to
 Loki stays deferred per §9 until there is production traffic worth watching.
+
+### A8. Payments, with the offline rail modelled first
+
+Change 6 warned that modelling only card authorise/capture makes Fawry a
+rewrite. The contract is therefore shaped around the asynchronous case, and
+the synchronous one treated as the special case that happens to finish
+immediately.
+
+`PaymentGateway` exposes `charge()`, `parseSettlement()` and `refund()`. Three
+consequences run through all of it:
+
+- **`charge()` returning without money is a normal outcome.** A reference
+  payment *expects* to leave with nothing collected. `PaymentResult` is a
+  four-way answer — succeeded, requires-action, awaiting-offline-payment,
+  failed — rather than a boolean, because code that reads "not succeeded" as
+  "failed" would cancel every Fawry order at the moment it was placed.
+- **Settlement arrives through a webhook we receive, never as the return value
+  of a call we made.** This is the only way an offline payment becomes paid,
+  and the safest way on a card rail too: a customer can close the tab
+  mid-3-D-Secure, and the callback still arrives.
+- **Every open intent has an expiry.** An unpaid reference otherwise holds its
+  reservation forever and the catalogue sells out to customers who never paid.
+  `kavo:expire-payments` sweeps hourly and emits `PaymentSettled`, which is the
+  seam Commerce will consume in Phase 1 to release stock.
+
+`PaymentStatus::AwaitingOfflinePayment` is a first-class state, and
+`reservesRatherThanCommits()` is what tells an order to hold stock rather than
+consume it.
+
+**Replay protection has two layers**, both tested. An intent that is already
+terminal ignores a repeated callback — providers retry by design, so that is
+the common path and must not error. A replay that reaches a non-terminal
+transition collides on a unique `(payment_intent_id, external_event_id)`
+constraint: the append-only history enforces idempotency rather than a check
+every caller has to remember. A settlement whose amount disagrees with the
+intent is never applied automatically — that is either a provider bug or a
+tampered payload, and both need a human.
+
+Routing is by rail (`PaymentGatewayManager`), so no caller names Paymob or
+Fawry. `fake` supports every rail, which makes the offline lifecycle — the one
+hardest to drive against a sandbox — exercisable with no credentials.
+
+**This also closes the second §10 gap.** `Idempotency-Key` middleware plus an
+`idempotency_keys` table means a checkout retried over a flaky mobile
+connection cannot become two charges, which in this market is the normal case
+rather than the edge case. Same key and body replays the first response; same
+key with a *different* body is a 422, because that is a client bug and
+replaying the first response would hide it behind a success; a key still in
+flight is a 409. Only non-5xx responses are stored — a server error must stay
+retryable.
+
+**Worth recording:** the generated isolation suite caught `IdempotencyKey`
+shipping without a factory and failed the build, which is exactly what that
+guard exists for. It is the second time it has caught a new tenant-scoped
+model before review did.

@@ -7,6 +7,11 @@ namespace App\Providers;
 use App\Modules\Platform\Analytics\Console\EnsureAnalyticsPartitions;
 use App\Modules\Platform\Analytics\Console\FlushAnalyticsBuffer;
 use App\Modules\Platform\Analytics\Services\BufferedAnalyticsIngestor;
+use App\Modules\Platform\Billing\Listeners\ApplyGatewaySettlement;
+use App\Modules\Platform\Billing\Payments\Console\ExpireOverduePayments;
+use App\Modules\Platform\Billing\Payments\Gateways\FawryGateway;
+use App\Modules\Platform\Billing\Payments\Gateways\PaymobGateway;
+use App\Modules\Platform\Billing\Payments\PaymentGatewayManager;
 use App\Modules\Platform\Entitlements\Console\FlushUsageCounters;
 use App\Modules\Platform\Entitlements\Services\EntitlementService;
 use App\Modules\Platform\Notifications\Channels\TenantDatabaseChannel;
@@ -50,6 +55,34 @@ final class PlatformServiceProvider extends ServiceProvider
         $this->app->singleton(AnalyticsIngestor::class, BufferedAnalyticsIngestor::class);
 
         $this->bindWhatsAppGateway();
+        $this->bindPaymentGateways();
+    }
+
+    /**
+     * Gateways are resolved by rail through the manager, so no caller names
+     * Paymob or Fawry directly. Credentials are read here rather than in the
+     * gateways so config:cache keeps working.
+     */
+    private function bindPaymentGateways(): void
+    {
+        $this->app->singleton(PaymentGatewayManager::class);
+
+        $this->app->bind(PaymobGateway::class, fn ($app) => new PaymobGateway(
+            $app->make(\Illuminate\Http\Client\Factory::class),
+            (string) config('services.paymob.base_url'),
+            (string) config('services.paymob.api_key'),
+            (string) config('services.paymob.integration_id'),
+            (string) config('services.paymob.iframe_id'),
+            (string) config('services.paymob.hmac_secret'),
+        ));
+
+        $this->app->bind(FawryGateway::class, fn ($app) => new FawryGateway(
+            $app->make(\Illuminate\Http\Client\Factory::class),
+            (string) config('services.fawry.base_url'),
+            (string) config('services.fawry.merchant_code'),
+            (string) config('services.fawry.security_key'),
+            (int) config('kavo.payments.reference_expiry_hours', 72),
+        ));
     }
 
     /**
@@ -119,6 +152,14 @@ final class PlatformServiceProvider extends ServiceProvider
     private function registerListeners(): void
     {
         Event::listen(QuotaThresholdReached::class, SendQuotaThresholdAlert::class);
+
+        // Settlement is the only way an offline payment ever becomes paid, so
+        // every payment provider's callbacks route into the same handler.
+        foreach (['paymob', 'fawry', 'fake'] as $provider) {
+            foreach (['transaction', 'orderStatus', 'PAID', 'EXPIRED', 'CANCELED', 'REFUNDED', 'unknown'] as $type) {
+                Event::listen("webhook.{$provider}.{$type}", [ApplyGatewaySettlement::class, 'handle']);
+            }
+        }
     }
 
     private function registerCommands(): void
@@ -132,6 +173,7 @@ final class PlatformServiceProvider extends ServiceProvider
             FlushAnalyticsBuffer::class,
             EnsureAnalyticsPartitions::class,
             SlowQueries::class,
+            ExpireOverduePayments::class,
         ]);
     }
 
@@ -146,6 +188,9 @@ final class PlatformServiceProvider extends ServiceProvider
             // Keeps partition runway ahead of ingestion. The DEFAULT
             // partition means a missed run costs pruning, not data.
             $schedule->command('kavo:analytics-partitions')->monthlyOn(1, '00:10');
+
+            // An unpaid reference left open holds its reservation forever.
+            $schedule->command('kavo:expire-payments')->hourly()->withoutOverlapping();
         });
     }
 

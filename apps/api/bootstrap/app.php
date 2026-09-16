@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Platform\Billing\Http\Middleware\EnsureIdempotency;
 use App\Modules\Platform\Entitlements\Http\Middleware\EnforceQuota;
 use App\Modules\Platform\Identity\Http\Middleware\EnsurePlatformAdmin;
 use App\Modules\Platform\Identity\Http\Middleware\ResolveTenant;
@@ -57,6 +58,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // quota:orders or quota:orders,5 — fixed-cost metering for a
             // route, so a new metered endpoint is one middleware away.
             'quota' => EnforceQuota::class,
+            // Replays the first response for a repeated Idempotency-Key.
+            'idempotent' => EnsureIdempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

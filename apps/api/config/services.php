@@ -42,8 +42,18 @@ return [
     ],
 
     'paymob' => [
+        'base_url' => env('PAYMOB_BASE_URL', 'https://accept.paymob.com'),
         'api_key' => env('PAYMOB_API_KEY'),
+        'integration_id' => env('PAYMOB_INTEGRATION_ID'),
+        'iframe_id' => env('PAYMOB_IFRAME_ID'),
+        'hmac_secret' => env('PAYMOB_HMAC_SECRET'),
         'webhook_secret' => env('PAYMOB_WEBHOOK_SECRET'),
+    ],
+
+    'fawry' => [
+        'base_url' => env('FAWRY_BASE_URL', 'https://atfawry.fawrystaging.com'),
+        'merchant_code' => env('FAWRY_MERCHANT_CODE'),
+        'security_key' => env('FAWRY_SECURITY_KEY'),
     ],
 
 ];

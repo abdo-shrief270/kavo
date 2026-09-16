@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Platform\Billing\Http\Controllers\PaymentController;
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
 use App\Modules\Platform\Identity\Http\Controllers\AuthController;
 use App\Modules\Platform\Identity\Http\Controllers\TenantController;
@@ -35,6 +36,15 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::post('domains', [DomainController::class, 'store'])->name('domains.store');
     Route::post('domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
     Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
+    Route::get('payments/rails', [PaymentController::class, 'rails'])->name('payments.rails');
+    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+    // Idempotent: a checkout retried over a flaky mobile connection must not
+    // become two charges, which is the normal case in this market.
+    Route::post('payments', [PaymentController::class, 'store'])->middleware('idempotent')->name('payments.store');
+    Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
+    Route::post('payments/simulate-settlement', [PaymentController::class, 'simulateSettlement'])->name('payments.simulate');
 
     // Metered: uploads are charged against storage_mb before the file is
     // written, and deleting one returns the allowance.
