@@ -680,3 +680,72 @@ retryable.
 shipping without a factory and failed the build, which is exactly what that
 guard exists for. It is the second time it has caught a new tenant-scoped
 model before review did.
+
+### A9. Deploy and backups, rehearsed rather than written
+
+The last two §8 items. Both were **run**, and both were wrong the first time.
+
+**Deploy.** `deploy.sh` was refactored so every path and every host command is
+overridable. That is not a testing affordance bolted on: a deploy script with
+hardcoded paths and `sudo` calls cannot be rehearsed at all, and an
+unrehearsable deploy script is one you debug for the first time during an
+outage. `rehearse-deploy.sh` drives it against a scratch directory and checks
+the parts that only matter when something goes wrong — 13 assertions, now in
+CI:
+
+- the symlink swap moves `current` and keeps the previous release on disk
+- a failing health check **after** the swap rolls the symlink back and keeps
+  the broken release for inspection
+- a failure **before** the swap discards the partial release and never touches
+  the live one
+- pruning never deletes the release currently being served
+
+The rollback path is the one that matters and the one nobody tests. It runs
+here on every change to `deploy/`.
+
+**Backups.** Covered in `deploy/backup/README.md`; the short version is that
+three separate defects stood between the scripts and a working recovery, none
+of them visible by reading the code: the cluster configuration was not in the
+backup at all (Debian keeps it outside `PGDATA`), extraction reset the data
+directory's mode below what Postgres will start on, and the drill *hung*
+rather than failing because `psql` prompted for a password with no terminal
+attached — which cron would never have reported.
+
+The final run proves point-in-time recovery: a base backup holding 1 tenant,
+25 more written afterwards, and a restore that returned 26 with all 18
+`tenant_isolation` policies intact. CI re-proves it on every change to
+`deploy/`.
+
+**What this does not prove.** Neither has run against a real VPS. The stubbed
+commands — `systemctl reload php8.4-fpm`, `supervisorctl restart`, composer
+and pnpm — are real on the box and stubbed in rehearsal, so a first production
+deploy still needs watching. What is proven is the logic around them, which is
+where the failure modes actually live.
+
+---
+
+## Phase 0 status
+
+Against the original slice list: **all thirteen are now built**, and the exit
+checklist stands as follows.
+
+| Exit criterion | State |
+|---|---|
+| CI green on every PR | Workflows written; **unverified — CI has never run** |
+| Zero-downtime deploy, both environments | Logic rehearsed and in CI; not run on a VPS |
+| Rollback tested | ✅ Exercised, including the post-swap path |
+| Tenant isolation suite, one test per model | ✅ Generated; has caught two models pre-review |
+| Sign up → plan → quota → blocked/warned | ✅ End to end, 402 with an upgrade prompt |
+| Custom domain verified, SSL automatic | Verification ✅; **no certificate has been issued** |
+| Email, in-app and WhatsApp delivered and logged | ✅ Path built and tested; no live BeOn credentials |
+| Inbound webhook processed idempotently | ✅ Replay tested |
+| Outbound webhook retried and dead-lettered | Coded; not exercised against a failing endpoint |
+| Reverb delivers to an authorised channel, rejects others | Rejection ✅ tested; delivery ✅ dispatched, not observed over a live socket |
+| Sentry receiving tagged errors, both halves | Wired; **no DSN has been exercised** |
+| Slow query logging with tenant and route | ✅ Verified at runtime |
+| Off-box backup, restore performed once | ✅ Restore performed; **off-box upload unexercised** (no bucket) |
+
+The honest summary: the platform's logic is built and tested, and what remains
+unproven is everything that needs credentials or a server — a first deploy, a
+real certificate, a live Sentry DSN, a real BeOn send, and an S3 bucket. Those
+are an afternoon with infrastructure, not more code.

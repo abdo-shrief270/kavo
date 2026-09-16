@@ -22,6 +22,12 @@ DATABASE="${KAVO_DRILL_DATABASE:-kavo}"
 # which is the failure mode a naive "did it start?" check misses entirely.
 MIN_TENANTS="${KAVO_DRILL_MIN_TENANTS:-1}"
 
+# Row-level security must survive a restore. Set to 0 only where the schema
+# under test genuinely has no policies — never for the real database, where a
+# recovered copy that lost its policies is a cross-tenant leak wearing a
+# backup's clothes.
+MIN_POLICIES="${KAVO_DRILL_MIN_POLICIES:-10}"
+
 log() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 
 # -w on every psql call, without exception. The restored cluster carries the
@@ -85,11 +91,9 @@ TENANTS="$(psql_drill -d "$DATABASE" -tAc 'SELECT count(*) FROM tenants' 2>/dev/
 [ "$TENANTS" = "ERR" ] && fail "could not query the restored database"
 [ "$TENANTS" -ge "$MIN_TENANTS" ] || fail "restored database has ${TENANTS} tenants, expected at least ${MIN_TENANTS}"
 
-# Row-level security must survive a restore. A recovered database that has
-# lost its policies is a cross-tenant data leak wearing a backup's clothes.
 POLICIES="$(psql_drill -d "$DATABASE" -tAc \
   "SELECT count(*) FROM pg_policies WHERE policyname = 'tenant_isolation'" 2>/dev/null || echo 0)"
-[ "$POLICIES" -ge 10 ] || fail "restored database has only ${POLICIES} tenant_isolation policies — isolation did not survive the restore"
+[ "$POLICIES" -ge "$MIN_POLICIES" ] || fail "restored database has only ${POLICIES} tenant_isolation policies, expected at least ${MIN_POLICIES} — isolation did not survive the restore"
 
 log "DRILL PASSED — ${TENANTS} tenants, ${POLICIES} isolation policies intact"
 exit 0

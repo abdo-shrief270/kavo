@@ -1,0 +1,84 @@
+name: Deploy scripts
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['deploy/**', '.github/workflows/deploy-scripts.yml']
+  pull_request:
+    paths: ['deploy/**', '.github/workflows/deploy-scripts.yml']
+
+jobs:
+  rehearse:
+    name: Rehearse deploy and rollback
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax-check every script
+        run: |
+          set -euo pipefail
+          find deploy -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          echo "All deploy scripts parse."
+
+      - name: Shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          # SC1091: sourced files are not present in the checkout.
+          find deploy -name '*.sh' -print0 | xargs -0 shellcheck -e SC1091 -S warning
+
+      # The parts that only matter when something goes wrong — the atomic
+      # swap, the health gate, rollback after a bad release is already live,
+      # and pruning that must never delete the release currently serving.
+      # Rehearsing them in CI means the first time they run is not an outage.
+      - name: Rehearse
+        run: bash deploy/rehearse-deploy.sh "${RUNNER_TEMP}/kavo-deploy-rehearsal"
+
+  backup-scripts:
+    name: Backup and restore drill
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Postgres
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-16 postgresql-client-16
+
+      # Runs the real thing: archive WAL, take a base backup, write more data,
+      # restore, and assert the post-backup rows came back. This is the claim
+      # behind WAL archiving, and it is worth re-proving on every change to
+      # these scripts.
+      - name: Backup, write, restore, verify
+        run: |
+          set -euo pipefail
+          sudo install -m 0755 deploy/backup/kavo-archive-wal.sh /usr/local/bin/kavo-archive-wal.sh
+          sudo mkdir -p /var/backups/kavo/{wal,base}
+          sudo chown -R postgres:postgres /var/backups/kavo
+
+          sudo tee -a /etc/postgresql/16/main/postgresql.conf < deploy/backup/postgresql-archiving.conf > /dev/null
+          echo "host all all 127.0.0.1/32 trust"        | sudo tee -a /etc/postgresql/16/main/pg_hba.conf > /dev/null
+          echo "host replication all 127.0.0.1/32 trust" | sudo tee -a /etc/postgresql/16/main/pg_hba.conf > /dev/null
+          sudo pg_ctlcluster 16 main restart
+          sleep 5
+
+          sudo -u postgres psql -qc "CREATE DATABASE kavo"
+          sudo -u postgres psql -d kavo -qc "CREATE TABLE tenants (id serial primary key, name text)"
+          sudo -u postgres psql -d kavo -qc "INSERT INTO tenants (name) SELECT 'before-'||g FROM generate_series(1,5) g"
+
+          sudo -u postgres env PGUSER=postgres bash deploy/backup/postgres-backup.sh
+
+          # Written AFTER the base backup: only WAL replay can bring these back.
+          sudo -u postgres psql -d kavo -qc "INSERT INTO tenants (name) SELECT 'after-'||g FROM generate_series(1,20) g"
+          sudo -u postgres psql -qc "SELECT pg_switch_wal()"
+          sleep 3
+
+          sudo chown -R postgres:postgres /var/backups/kavo
+          sudo -u postgres env \
+            KAVO_DRILL_DIR=/var/tmp/kavo-drill \
+            KAVO_PG_BIN=/usr/lib/postgresql/16/bin \
+            KAVO_DRILL_MIN_TENANTS=25 \
+            KAVO_DRILL_MIN_POLICIES=0 \
+            KAVO_DRILL_DATABASE=kavo \
+            bash deploy/backup/restore-drill.sh
