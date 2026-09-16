@@ -52,14 +52,10 @@ final class SendWhatsAppNotification implements ShouldQueue
             return;
         }
 
+        // runBound, not bind/clear: dispatched from a request and run inline
+        // on the sync queue, clearing would strand the caller's tenant.
         $context->runAs($tenant, function () use ($gateway, $session, $tenant): void {
-            $session->bind($tenant->getKey());
-
-            try {
-                $this->send($gateway, $tenant);
-            } finally {
-                $session->clear();
-            }
+            $session->runBound($tenant->getKey(), fn () => $this->send($gateway, $tenant));
         });
     }
 

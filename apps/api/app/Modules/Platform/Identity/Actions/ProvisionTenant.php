@@ -59,9 +59,7 @@ final readonly class ProvisionTenant
                 // Written inside the tenant's own context so the row passes
                 // the same RLS policy every other write does.
                 $this->context->runAs($tenant, function () use ($tenant, $plan): void {
-                    $this->session->bind($tenant->getKey());
-
-                    try {
+                    $this->session->runBound($tenant->getKey(), function () use ($tenant, $plan): void {
                         Subscription::create([
                             'tenant_id' => $tenant->getKey(),
                             'plan_id' => $plan->getKey(),
@@ -70,9 +68,7 @@ final readonly class ProvisionTenant
                             'current_period_start' => now(),
                             'current_period_end' => now()->addMonth(),
                         ]);
-                    } finally {
-                        $this->session->clear();
-                    }
+                    });
                 });
             }
 

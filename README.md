@@ -98,6 +98,14 @@ and one without a factory fails the build rather than shipping unproven.
 
 ## Operational notes
 
+- **Realtime needs a queue worker.** `ShouldBroadcast` events go through the
+  queue, so with no worker running the socket connects, the subscribe
+  succeeds, and nothing is ever delivered — silently, with no error anywhere.
+  Verified over a live socket: an unauthorised subscribe is refused with
+  Pusher code `4009`, an authorised one receives the event, and the only
+  difference between "working" and "silently broken" is a running worker.
+  Supervisor must keep `queue:work` and `reverb:start` up together.
+
 - **Migrations run before the symlink swap, and the swap rolls back while the
   schema does not.** Old and new code also coexist briefly while queue workers
   drain. Destructive migrations are therefore a two-deploy change, and CI

@@ -38,14 +38,11 @@ final class DeliverOutboundWebhook implements ShouldQueue
             return;
         }
 
+        // runBound, not bind/clear: on the sync queue — or via dispatchSync —
+        // this runs inline inside a request that already has a tenant bound,
+        // and clearing it there strands the rest of that request.
         $context->runAs($tenant, function () use ($http, $session, $tenant): void {
-            $session->bind($tenant->getKey());
-
-            try {
-                $this->deliver($http);
-            } finally {
-                $session->clear();
-            }
+            $session->runBound($tenant->getKey(), fn () => $this->deliver($http));
         });
     }
 

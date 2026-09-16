@@ -50,15 +50,11 @@ final class FlushUsageCounters extends Command
             }
 
             $context->runAs($tenant, function () use ($session, $meter, $tenant, $entry, &$flushed): void {
-                $session->bind($tenant->getKey());
-
-                try {
+                $session->runBound($tenant->getKey(), function () use ($meter, $tenant, $entry, &$flushed): void {
                     $meter->flush($tenant, $entry['metric']);
                     $meter->clearDirty($tenant, $entry['metric']);
                     $flushed++;
-                } finally {
-                    $session->clear();
-                }
+                });
             });
         }
 
