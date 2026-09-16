@@ -1,134 +1,172 @@
 # ADR 0002 — Project Name, GitHub Org and Domain
 
 **Status:** Proposed — needs a human decision
-**Date:** 2026-09-16
+**Date:** 2026-09-16 (revised)
 **Checked:** 2026-09-16
 
 ---
 
 ## Recommendation
 
-**Name:** Kavo
-**GitHub org:** `kavohq` — https://github.com/kavohq
-**Domain:** `kavohq.com`
+**Name:** Stamen · **GitHub org:** `stamenhq` · **Domain:** `stamenhq.com`
 
-Matched pair, four-letter stem, pronounceable in English and Arabic (كافو), and the `hq`
-suffix is a well-established convention for exactly this situation (a good short stem
-whose bare `.com` is gone). The repository is already named `kavo`, so nothing is thrown
-away.
+*Stāmen* is Latin for **the warp thread on an upright loom** — the fixed threads strung
+first, that every other thread is woven across. That is a precise description of what
+Phase 0 is: the shared foundation strung once, with Fashion, Courses, Beauty and Auto
+Parts woven onto it. It is also the only candidate in this search with no same-class
+trademark conflict.
 
-**Before buying anything, read the trademark note in §4.** It is not a blocker, but it
-is a real consideration and it is cheaper to think about now.
+**Runner-up:** Merx (`merxhq.com` / `github.com/merxhq`) — Latin for *merchandise*, root of
+commerce, merchant and market.
 
----
-
-## 1. Method and confidence
-
-**GitHub** — checked by fetching `https://github.com/<name>` directly. HTTP 404 means the
-account name is unclaimed; a rendered profile means taken. This is **definitive**.
-
-**Domains** — RDAP, WHOIS and DNS-over-HTTPS endpoints are all blocked by this session's
-network egress policy, so registration status could not be read from a registry. What was
-done instead: direct NS/SOA lookups against **three independent public resolvers**
-(Google 8.8.8.8, Cloudflare 1.1.1.1, Quad9 9.9.9.9), with agreement required across all
-three.
-
-That distinction matters:
-
-- **NS or SOA records present → definitively registered.** No ambiguity.
-- **NXDOMAIN on all three resolvers → very probably unregistered.** Not proof. A domain
-  can be registered with no nameservers delegated — typically one just bought and not yet
-  configured, or a registry-reserved or premium-priced name.
-
-So: the "taken" column below is certain; the "available" column is a strong signal that
-should be **confirmed at a registrar before purchase**. Expect a small number of the
-listed names to come back as premium-priced rather than standard registration.
+Both are free on `.com` and GitHub. Read §4 before buying — the conflict picture is the
+thing that separates these candidates, not availability.
 
 ---
 
-## 2. Results — GitHub
+## 1. "Verto" is not available
 
-| Org name | Status |
-|---|---|
-| `kavo` | **Taken** — existing user account "KaVo" (9 followers, 2 public repos) |
-| `kavohq` | **Available** |
-| `kavo-hq` | **Available** |
-| `kavocloud` | **Available** |
-| `kavoplatform` | **Available** |
-| `kavocore` | **Available** |
-| `usekavo` | **Available** |
+Checked first, since it was the specific request:
 
-## 3. Results — `.com`
+- `verto.com` — **registered**
+- `vertohq.com` — **registered**
+- `github.com/verto` — **taken**
+- Every clean variant tested (`verta`, `vertos`, `vertix`, `vertek`, `vertio`, `vertis`,
+  `vertum`, `vertana`, `vertiva`, `verso`, `versohq`, `vertigo`, `vertly`, `vertify`) —
+  **all registered**
 
-**Confirmed registered** (NS records present):
+Only `getverto.com` and `usverto.com` survived, and a `get-` prefix reads as a product
+landing page, not a company. The instinct behind *verto* was right, though — a Latin root
+tied to the work — so the search widened along exactly that axis, and everything below
+came from it.
 
-`kavo.com` · `getkavo.com` · `trykavo.com` · `kavoapp.com` · `kavolabs.com` ·
-`kavostack.com` · `kavora.com` · `kavoos.com` · `kavoly.com` · `kavonis.com` ·
-`kavoria.com` · `kavoro.com` · `kavito.com` · `qavo.com` · `cavo.com` · `navo.com` ·
-`zavo.com` · `lavo.com` · `tavo.com` · `savo.com` · `ravo.com`
+---
 
-**No DNS on any of three resolvers — likely available:**
+## 2. Method and confidence
 
-| Domain | Matching GitHub org | Comment |
+**GitHub** — fetched `https://github.com/<name>` directly. 404 = unclaimed, rendered
+profile = taken. **Definitive.**
+
+**Domains** — RDAP, WHOIS and DNS-over-HTTPS are all blocked by this session's network
+egress policy, so registration could not be read from a registry. Instead: NS/SOA lookups
+against **three independent resolvers** (Google `8.8.8.8`, Cloudflare `1.1.1.1`, Quad9
+`9.9.9.9`), requiring agreement across all three.
+
+- **NS/SOA present → definitively registered.**
+- **NXDOMAIN on all three → very probably unregistered.** Not proof: a domain can be
+  registered with nameservers not yet delegated, or be registry-reserved or
+  premium-priced.
+
+So "taken" below is certain; "available" is a strong signal to **confirm at a registrar
+before purchase**. Expect one or two to come back premium-priced.
+
+---
+
+## 3. Search scope
+
+Roughly **3,700 candidates** were checked across five semantic families, all chosen to
+mean something about the work:
+
+| Family | Reasoning | Examples tried |
 |---|---|---|
-| **`kavohq.com`** | `kavohq` ✅ | **Recommended.** Shortest, cleanest pair |
-| `kavocloud.com` | `kavocloud` ✅ | Good second choice. Slightly generic |
-| `kavoplatform.com` | `kavoplatform` ✅ | Accurate but long, and "platform" ages into a liability once there are four products |
-| `kavocore.com` | `kavocore` ✅ | Reads more like an internal component than a company |
-| `usekavo.com` | `usekavo` ✅ | The `use-` convention reads as a product page, not a company |
-| `kavocommerce.com` | — | Too narrow — this platform is also Courses |
-| `kavosaas.com` · `kavosys.com` · `kavobase.com` · `kavoflow.com` · `kavoengine.com` · `kavogrid.com` · `kavoworks.com` | — | All clear, none better than `kavohq` |
+| Turn / vertical | The *verto* root | verto, verso, torno, pivo, vertek |
+| **Weave / textile** | Fashion is Phase 1, *and* the architecture literally weaves verticals onto one fabric | texo, tela, telar, trama, stamen, licia, plexo, warp, loom, weav |
+| Build / foundation | What Phase 0 is | struo, fundo, basis, pylo, strata, forma, fabri |
+| Trade / market | What three of four verticals do | merx, merca, vendo, trado, agora, souk |
+| Root / core / growth | Shared core, many products | radix, kerna, nucla, axio, orto, surga, cresa |
 
-## 4. Trademark note — read this before buying
-
-`kavo.com` belongs to **KaVo Dental**, a long-established dental-equipment manufacturer
-(part of Envista, formerly Danaher). They publish formal trademark-usage guidelines,
-which means the mark is actively registered and actively policed.
-
-What this does and does not mean:
-
-- Trademark protection is scoped by class. KaVo's mark sits in dental and medical devices;
-  a vertical SaaS platform sits in classes 9 and 42 (software, and software-as-a-service).
-  Different classes and non-overlapping markets — **coexistence is normally fine**, and
-  plenty of unrelated brands share a name across classes.
-- **But** three practical consequences are certain regardless: `kavo.com` will never be
-  available; "kavo" search results will be dominated by a large incumbent for years; and
-  a well-resourced rights-holder is more likely than average to send a letter about a
-  similar mark, even where it would not ultimately prevail.
-- This is a cheap question to settle. A short consultation with an Egyptian or EU
-  trademark attorney, covering classes 9 and 42, is worth doing **before** anything is
-  printed, incorporated or registered — not after.
-
-**If that risk is unacceptable, the honest position is that there is no easy alternative.**
-Of 166 hand-curated brandable candidates checked — textile and weaving terms fitting the
-Fashion vertical (`loom`, `warp`, `weft`, `heddle`, `selvedge`), Arabic commerce words
-(`matjar`, `souqly`, `rukn`, `tijara`, `dukkan`, `manasa`, `mizan`), construction and
-foundation metaphors (`plinth`, `keystone`, `bedrock`, `basalt`, `granite`), and Egypt or
-Nile references (`kemet`, `nilo`, `giza`, `minaret`, `caravan`) — **six were free**, and
-none of those six were good. A further 2,300 generated coinages produced nothing
-pronounceable enough to build a brand on.
-
-Short, meaningful `.com` names are exhausted. A four-letter stem plus a conventional
-suffix is a good outcome, not a compromise.
+**Every bare four-to-six letter `.com` in all five families is registered.** So is every
+bare form on GitHub (`merx`, `texo`, `pylo`, `trama`, `plexo` are all taken accounts).
+That is the normal state of `.com` in 2026 and not specific to these words. Stem + `hq` is
+where the clean matched pairs are.
 
 ---
 
-## 5. Also secure
+## 4. The five clean matched pairs, and why four lose
 
-Cheap, and worth taking at the same time to protect the name:
+All five have **both** the `.com` and the GitHub org free. The conflict column is what
+decides it.
 
-- `kavo.app`, `kavo.io`, `kavo.dev` — the bare stem is often still free on newer TLDs and
-  beats `kavohq` on any of them
-- `kavo.eg` / `kavo.com.eg` — the local market TLD
-- The `kavohq` handle on X, Instagram, LinkedIn
+| Name | Domain | GitHub | Meaning | Conflict |
+|---|---|---|---|---|
+| **Stamen** | `stamenhq.com` ✅ | `stamenhq` ✅ | Latin: warp thread of a loom | **Stamen Design** — a cartography/data-viz studio. Design services, not a SaaS platform. Adjacent, not overlapping |
+| **Merx** | `merxhq.com` ✅ | `merxhq` ✅ | Latin: merchandise, goods | **MERX** — Canadian government e-tendering platform (mdf commerce). Same class — but the brand is being **retired in favour of SOVRA** |
+| Texo | `texohq.com` ✅ | `texohq` ✅ | Latin: *I weave* | ❌ **DTEN Inc. filed TEXO in Feb 2026**, expressly covering software platforms, mobile apps and **SaaS**. Direct same-class hit, and freshly filed |
+| Pylo | `pylohq.com` ✅ | `pylohq` ✅ | The monumental gateway of an Egyptian temple | ❌ **Pylo d.o.o.** (Slovenia) — an active software and hardware company, domain-verified on GitHub. Same class |
+| Weav | `weavhq.com` ✅ | `weavhq` ✅ | Weave | ❌ Worst of the set: a **WEAV trademark covering commerce-platform software**, a Weav acquired by Brex for $50M, and Weave (NYSE: **WEAV**) in healthcare SaaS |
 
-If `kavo.app` turns out to be free, it is worth considering as the primary and keeping
-`kavohq.com` as the redirect. A four-letter bare stem reads better than any suffixed form.
+**Texo deserves a note**, because on pure brand merit it was the best of the five — *texō*
+gives us text, textile, texture and context ("woven together"), and it is four letters
+that an Arabic speaker reads without friction. It loses on timing alone. A trademark
+application filed in February 2026 that explicitly names SaaS is the single worst kind of
+conflict to build on: same class, same services, and recent enough that the applicant is
+actively investing in the mark. Not worth it.
+
+**Why Stamen wins over Merx.** Merx means *goods* — excellent for Fashion, Beauty and Auto
+Parts, and wrong for Courses, which is Phase 2. A commerce name puts a ceiling on a
+platform that is deliberately not commerce-only. Stamen names the *platform*, not the
+products, so it generalises across all four verticals and any fifth. Its conflict is also
+genuinely weaker: a design studio in a different line of business, versus a same-class
+procurement platform whose trademark may well be maintained even after the SOVRA rebrand.
+
+Merx remains a good choice if the commerce framing is wanted deliberately.
 
 ---
 
-## 6. Next step
+## 5. Compared with Kavo
 
-1. Confirm `kavohq.com` at a registrar (watch for premium pricing).
-2. Register the GitHub org `kavohq` and transfer this repository into it.
-3. Book the 30-minute trademark consultation before committing the name publicly.
+Kavo was the previous recommendation and remains viable: `kavohq.com` and
+`github.com/kavohq` are both free, and the repository is already named `kavo`.
+
+Its problem is the same shape as Texo's, one step milder. `kavo.com` is **KaVo Dental**
+(Envista, formerly Danaher) — a large manufacturer that publishes formal trademark-usage
+guidelines, meaning the mark is actively policed. Dental devices sit in a different class
+from SaaS (9 and 42), so coexistence is normally fine. But three things are certain: the
+bare `.com` will never be obtainable, "kavo" search results will be dominated by a large
+incumbent for years, and a well-resourced rights-holder is above-average likely to send a
+letter even where it would not ultimately prevail.
+
+Kavo also means nothing. Stamen and Merx both say something true about the product.
+
+| | Stamen | Merx | Kavo |
+|---|---|---|---|
+| `.com` + GitHub free | ✅ | ✅ | ✅ |
+| Means something relevant | ✅ warp thread | ✅ merchandise | ❌ |
+| Covers all four verticals | ✅ | ⚠️ not Courses | ✅ (says nothing) |
+| Same-class conflict | ✅ none | ⚠️ retiring incumbent | ✅ none (different class) |
+| Large active rights-holder | ✅ no | ⚠️ mdf commerce | ⚠️ Envista |
+
+---
+
+## 6. Honest caveat on all of it
+
+Of **166 hand-curated brandable candidates** and roughly **3,500 generated coinages**,
+nine short names survived with both `.com` and GitHub free, and five were worth naming.
+Short, meaningful `.com` is exhausted — a stem plus `hq` is a good outcome in 2026, not a
+compromise. Linear, Resend and others made the same trade.
+
+If none of the five appeal, the remaining clean-but-weaker options are `texoris.com`,
+`texolis.com`, `orturis.com`, `kernoris.com` and `fabrora.com` — lower collision risk,
+weaker as brands.
+
+**None of this is legal advice.** A short consultation with an Egyptian or EU trademark
+attorney covering classes 9 and 42 is worth doing **before** the name is printed,
+incorporated or registered — not after. It is cheap now and expensive later.
+
+---
+
+## 7. Also secure
+
+- `stamen.app`, `stamen.io`, `stamen.dev` — a bare stem on a newer TLD beats `stamenhq`
+  on any of them, and is often still free
+- `stamen.eg` / `stamen.com.eg` — the local market TLD
+- The `stamenhq` handle on X, Instagram and LinkedIn
+
+---
+
+## 8. Next step
+
+1. Pick between **Stamen** and **Merx** (or keep **Kavo**).
+2. Confirm the `.com` at a registrar — watch for premium pricing.
+3. Register the GitHub org and transfer this repository into it.
+4. Book the trademark consultation before committing the name publicly.
