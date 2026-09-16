@@ -1,0 +1,28 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            export REPO_URL="${{ secrets.REPO_URL }}"
+            export HEALTH_URL="${{ secrets.HEALTH_URL }}"
+            bash /var/www/kavo-staging/shared/deploy.sh staging develop

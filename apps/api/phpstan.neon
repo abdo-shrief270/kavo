@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - routes
+        - tests
+
+    # Level 5 and ratcheted up deliberately. Starting at 9 on a new codebase
+    # produces hundreds of findings, and the usual outcome is the tool being
+    # disabled rather than the code being fixed.
+    level: 5
+
+    ignoreErrors:
+        # Eloquent's static factory/query surface is resolved by Larastan but
+        # not always through a generic model class-string.
+        - '#Call to an undefined static method .*::factory\(\)#'

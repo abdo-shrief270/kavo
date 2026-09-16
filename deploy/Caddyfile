@@ -1,0 +1,53 @@
+# FrankenPHP serves the API and terminates TLS. Caddy replaces Nginx here:
+# it gives us native JSON access logs and automatic certificates, including
+# on-demand issuance for tenant custom domains.
+{
+	frankenphp
+	order php_server before file_server
+
+	on_demand_tls {
+		# Caddy asks before issuing a certificate for an unknown hostname.
+		# Without this gate anyone could point a hostname at us and have us
+		# request certificates on their behalf until we hit a rate limit.
+		ask http://127.0.0.1:8000/internal/tls-ask
+		interval 2m
+		burst 8
+	}
+}
+
+# Platform surfaces.
+api.{$KAVO_ROOT_DOMAIN} {
+	root * /var/www/kavo-production/current/apps/api/public
+	php_server
+
+	log {
+		# Native structured logs, including $request_time equivalents, which
+		# gives p95/p99 per route with no app instrumentation.
+		output file /var/log/caddy/api.json
+		format json
+	}
+}
+
+# Tenant subdomains and verified custom domains. on_demand pairs with the ask
+# endpoint above: only hostnames that reached verifying or active get a cert.
+*.{$KAVO_ROOT_DOMAIN}, https:// {
+	tls {
+		on_demand
+	}
+
+	reverse_proxy 127.0.0.1:3000 {
+		# The storefront resolves the tenant from this header, so it must
+		# survive the proxy hop intact.
+		header_up Host {host}
+		header_up X-Forwarded-Host {host}
+	}
+
+	log {
+		output file /var/log/caddy/storefront.json
+		format json
+	}
+}
+
+ws.{$KAVO_ROOT_DOMAIN} {
+	reverse_proxy 127.0.0.1:8080
+}

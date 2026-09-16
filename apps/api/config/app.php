@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Git SHA, set at deploy time. This is what lets Sentry say "this error
+    // started at release X" instead of just "this error exists".
+    'release' => env('APP_RELEASE'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

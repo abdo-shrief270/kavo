@@ -456,3 +456,85 @@ CI/CD          GitHub Actions · Pint · Larastan · Deptrac · Pest · atomic r
 Everything else in the Phase 0 plan — module layout, slice order, exit checklist,
 expand/contract discipline, webhook idempotency, the interface-first gateway rule —
 stands as written.
+
+---
+
+## Amendment A — decisions changed during Phase 0 implementation
+
+**Date:** 2026-09-16 · **Status:** Accepted, supersedes §5 and parts of §11
+
+### A1. No Filament anywhere (supersedes Change 5)
+
+§5 recommended Filament for both the platform console and the merchant
+dashboard, on the grounds that it is CRUD over tenant-scoped resources and
+would cut the largest chunk of Phase 1 frontend work. **The owner decided
+against Filament entirely.** Implemented as three separate frontends:
+
+| Surface | Stack | Origin |
+|---|---|---|
+| Storefront | Nuxt 4 SSR | tenant hostname |
+| Merchant console | Vue 3 SPA | `:5173` |
+| Platform console | Vue 3 SPA | `:5174` |
+
+The trade-off §5 named is real and is now paid: the merchant dashboard is
+hand-built rather than generated, which is more work per screen. Two things
+that were mitigations are now benefits — business logic already lives in
+module services with thin controllers, and the API had to exist for the
+storefront regardless, so a future mobile client inherits a complete API
+rather than a Livewire surface it cannot use.
+
+The super-admin console is a **separate application on a separate origin**,
+not a route inside the merchant dashboard. The two should never share a
+session surface or be one mis-scoped route away from each other, and the
+platform console is visually distinct so it is never ambiguous which is open.
+Its API client never sends a tenant header: it reads across tenants by design
+and must not carry an identity that could appear to authorise a request.
+
+### A2. RLS coverage — three tables excluded, and why
+
+Implementation surfaced a bootstrapping problem the ADR did not anticipate.
+Resolution has to read the database *before* a tenant is known, so a policy on
+the tables it reads deadlocks every request. Excluded, with reasoning recorded
+in the migration:
+
+- `tenants` — the thing being scoped to.
+- `domains` — maps hostname to tenant, read before the GUC is set. Reached
+  only through `TenantLocator`, the single audited pre-tenant read path.
+- `tenant_user` — membership. This is what `ResolveTenant` and every channel
+  authorisation callback consult to decide whether a user may act as a tenant
+  at all, so it cannot itself require a bound tenant. Queries against it are
+  scoped by authenticated `user_id` instead.
+
+None carry tenant payload. Everything that does is covered.
+
+### A3. The migration role needs BYPASSRLS
+
+§2 specified splitting the roles so the app role owns nothing. Correct, but
+incomplete: `FORCE ROW LEVEL SECURITY` applies policies to the table owner
+too, which blocks the cross-tenant backfills that expand/contract migrations
+legitimately perform. `kavo_owner` therefore holds `BYPASSRLS` and is never
+used to serve a request; `kavo_app` remains non-owner and `NOBYPASSRLS`. CI
+asserts the latter before running the isolation suite, because a suite running
+with privileges production never has would prove nothing.
+
+### A4. PHPUnit instead of Pest
+
+§9 specified Pest. Pest could not be installed in this environment — composer
+cannot authenticate to GitHub for that dist — so the suite is written for
+PHPUnit, which Pest runs on top of anyway. The substance is unchanged: 89
+tests, real Postgres and Redis, generated isolation coverage. Moving to Pest
+later is additive.
+
+PHPStan/Larastan and Deptrac hit the same download failure, so their configs
+(`phpstan.neon`, `deptrac.yaml`) are written and wired into CI but **have not
+been run locally** — they are unverified until the first CI run.
+
+### A5. Versions actually used
+
+The ADR assumed PHP 8.5 and PostgreSQL 17. This environment provides PHP 8.4
+and PostgreSQL 16, both within Laravel 13's supported range, and nothing built
+depends on a 8.5- or 17-only feature. CI targets PHP 8.4 and Postgres 17.
+Octane and FrankenPHP are installed and configured per Change 1 but the
+application has not yet been run under them — that is the first task of the
+next slice, and the Octane-specific state teardown it requires is already
+implemented and tested.

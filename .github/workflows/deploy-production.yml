@@ -1,0 +1,43 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  # Never cancel a production deploy mid-flight: an interrupted run can leave
+  # migrations applied with the symlink un-swapped.
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Gated by a GitHub environment protection rule requiring manual approval.
+    # Same script as staging, different target — a staging deploy that behaves
+    # differently from production tells you nothing.
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            export REPO_URL="${{ secrets.REPO_URL }}"
+            export HEALTH_URL="${{ secrets.HEALTH_URL }}"
+            bash /var/www/kavo-production/shared/deploy.sh production main
+
+      - name: Tag the Sentry release
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          version: ${{ github.sha }}

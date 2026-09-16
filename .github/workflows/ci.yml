@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: valkey/valkey:9
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, redis, bcmath, intl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('apps/api/composer.lock') }}
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+        working-directory: apps/api
+
+      # The role split is what makes row-level security real: the app role
+      # must own nothing and hold no BYPASSRLS, or every isolation test below
+      # passes while proving nothing.
+      - name: Provision database roles
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -c "CREATE ROLE kavo_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE ROLE kavo_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE DATABASE kavo_test OWNER kavo_owner;"
+
+      - name: Verify the app role cannot bypass RLS
+        env:
+          PGPASSWORD: postgres
+        run: |
+          result=$(psql -h localhost -U postgres -tAc \
+            "SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname = 'kavo_app'")
+          if [ "$result" != "f" ]; then
+            echo "::error::kavo_app can bypass row-level security. The isolation suite would be vacuous."
+            exit 1
+          fi
+
+      - run: cp .env.example .env && php artisan key:generate
+        working-directory: apps/api
+
+      - name: Lint (Pint)
+        run: php vendor/bin/pint --test
+        working-directory: apps/api
+
+      - name: Static analysis (PHPStan)
+        run: php vendor/bin/phpstan analyse --no-progress
+        working-directory: apps/api
+
+      # Boundary rules enforced by a job, not by code review. Review
+      # discipline decays exactly when delivery pressure is highest, which is
+      # when a boundary violation is most likely and most costly.
+      - name: Module boundaries (Deptrac)
+        run: php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered
+        working-directory: apps/api
+
+      - name: Tests
+        run: php vendor/bin/phpunit
+        working-directory: apps/api
+        env:
+          DB_HOST: localhost
+          REDIS_HOST: localhost
+
+      - name: Security audit
+        run: composer audit --no-interaction
+        working-directory: apps/api
+
+  # A separate, required job. Tenant isolation failing must be unmistakable in
+  # the checks list rather than buried in a general test run.
+  tenant-isolation:
+    name: Tenant isolation
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: valkey/valkey:9
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, redis, bcmath, intl
+          coverage: none
+          tools: composer:v2
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+        working-directory: apps/api
+
+      - env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -c "CREATE ROLE kavo_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE ROLE kavo_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE DATABASE kavo_test OWNER kavo_owner;"
+
+      - run: cp .env.example .env && php artisan key:generate
+        working-directory: apps/api
+
+      - name: Isolation and row-level security
+        run: |
+          php vendor/bin/phpunit \
+            tests/Feature/TenantIsolationTest.php \
+            tests/Feature/RowLevelSecurityTest.php \
+            tests/Feature/ChannelAuthorizationTest.php
+        working-directory: apps/api
+        env:
+          DB_HOST: localhost
+          REDIS_HOST: localhost
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Built in CI so a broken build fails the pull request, never the
+      # deploy. A deploy is the worst place to discover a type error.
+      - run: pnpm -r typecheck
+
+      - run: pnpm -r build
+
+      - run: pnpm audit --audit-level high
+        continue-on-error: true

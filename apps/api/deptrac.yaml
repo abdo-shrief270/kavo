@@ -1,0 +1,197 @@
+# Module boundaries, enforced by CI rather than by code review.
+#
+# The rules are the ones in ADR 0001: a Platform module may never reach into
+# a vertical, and modules talk through contracts and events rather than each
+# other's Eloquent models. Deptrac is what keeps that true after the third
+# deadline.
+deptrac:
+  paths:
+    - ./app
+
+  layers:
+    - name: Shared
+      collectors:
+        - type: directory
+          value: app/Shared/.*
+
+    - name: Support
+      collectors:
+        - type: directory
+          value: app/Support/.*
+
+    - name: Models
+      collectors:
+        - type: directory
+          value: app/Models/.*
+
+    - name: Providers
+      collectors:
+        - type: directory
+          value: app/Providers/.*
+
+    - name: Http
+      collectors:
+        - type: directory
+          value: app/Http/.*
+
+    - name: Identity
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Identity/.*
+
+    - name: Billing
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Billing/.*
+
+    - name: Entitlements
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Entitlements/.*
+
+    - name: Domains
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Domains/.*
+
+    - name: Themes
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Themes/.*
+
+    - name: Media
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Media/.*
+
+    - name: Notifications
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Notifications/.*
+
+    - name: Webhooks
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Webhooks/.*
+
+    - name: Realtime
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Realtime/.*
+
+    - name: Analytics
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Analytics/.*
+
+    - name: Audit
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Audit/.*
+
+  ruleset:
+    # Everything may use the shared contracts, enums and tenancy primitives.
+    # That is what Shared is for.
+    Shared:
+      - Models
+    Support: ~
+    Models:
+      - Shared
+      - Identity
+
+    # Identity is the root of tenancy: every module resolves a tenant, so
+    # every module may depend on it. It depends on no other module.
+    Identity:
+      - Shared
+      - Support
+      - Models
+      - Domains
+      - Billing
+      - Audit
+
+    Billing:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Audit
+
+    Entitlements:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Billing
+
+    Domains:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Audit
+
+    Themes:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Audit
+
+    Media:
+      - Shared
+      - Support
+      - Models
+      - Identity
+
+    Notifications:
+      - Shared
+      - Support
+      - Models
+      - Identity
+
+    Webhooks:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Audit
+
+    Realtime:
+      - Shared
+      - Support
+      - Models
+      - Identity
+
+    Analytics:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Audit
+
+    Audit:
+      - Shared
+      - Support
+      - Models
+      - Identity
+
+    Providers:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Billing
+      - Entitlements
+      - Domains
+      - Themes
+      - Media
+      - Notifications
+      - Webhooks
+      - Realtime
+      - Analytics
+      - Audit
+
+    Http:
+      - Shared
+      - Support
+      - Models

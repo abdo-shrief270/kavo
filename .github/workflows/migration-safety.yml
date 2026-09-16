@@ -1,0 +1,44 @@
+name: Migration safety
+
+on:
+  pull_request:
+    paths: ['apps/api/database/migrations/**']
+
+jobs:
+  expand-contract:
+    name: Expand/contract check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Migrations run before the symlink swap, and the swap rolls back but
+      # the schema does not. Old and new code also coexist briefly while queue
+      # workers drain. So a destructive migration is a two-deploy change, and
+      # this turns that convention into a gate.
+      - name: Reject destructive migrations without review
+        run: |
+          set -euo pipefail
+
+          added=$(git diff --name-only --diff-filter=A \
+            "origin/${{ github.base_ref }}...HEAD" -- apps/api/database/migrations || true)
+
+          [ -z "$added" ] && { echo "No new migrations."; exit 0; }
+
+          failed=0
+          for file in $added; do
+            if grep -qE 'dropColumn|renameColumn|dropIfExists|->change\(\)' "$file"; then
+              if grep -q 'expand-contract-reviewed' "$file"; then
+                echo "OK  $file (explicitly reviewed)"
+              else
+                echo "::error file=$file::Destructive migration. Old and new code coexist during deploy, and a rolled-back symlink does not roll back the schema. Split into two deploys, or add an 'expand-contract-reviewed' comment explaining why this is safe."
+                failed=1
+              fi
+            else
+              echo "OK  $file"
+            fi
+          done
+
+          exit $failed

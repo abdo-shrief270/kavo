@@ -17,6 +17,10 @@ final class WhatsAppTemplate extends Model
 {
     use HasFactory;
 
+    // Set explicitly: Laravel's inflector turns WhatsAppTemplate into
+    // "whats_app_templates", which is not the table the migration creates.
+    protected $table = 'whatsapp_templates';
+
     protected $fillable = ['code', 'language', 'body', 'variables', 'approval_status', 'provider_template_id', 'approved_at', 'rejection_reason'];
 
     protected function casts(): array
