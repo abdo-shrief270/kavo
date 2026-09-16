@@ -25,7 +25,16 @@ final class TlsAskController
     public function __invoke(Request $request, TenantLocator $locator): Response
     {
         $expected = (string) config('kavo.tls_ask_token');
-        $presented = (string) $request->header('X-Caddy-Token', '');
+
+        // Query string, because Caddy's `ask` sends a bare GET and offers no
+        // way to add a header — a token expected in one would have rejected
+        // every issuance, and custom domains would simply never get a
+        // certificate. It is in the URL rather than being no check at all:
+        // the endpoint listens on loopback, and the real gate is
+        // hostnameIsIssuable below. The header is still accepted so the
+        // endpoint can be probed by hand without putting the token in a
+        // shell history.
+        $presented = (string) ($request->query('token') ?? $request->header('X-Caddy-Token', ''));
 
         if ($expected === '' || ! hash_equals($expected, $presented)) {
             return response('', 403);

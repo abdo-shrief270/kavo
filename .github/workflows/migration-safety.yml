@@ -29,7 +29,13 @@ jobs:
 
           failed=0
           for file in $added; do
-            if grep -qE 'dropColumn|renameColumn|dropIfExists|->change\(\)' "$file"; then
+            # Only up(). A down() that drops what up() added is a correct
+            # reversible migration, not a destructive deploy — matching on the
+            # whole file flags every well-written migration and teaches people
+            # to ignore this gate.
+            up=$(awk '/function up\(/{flag=1} /function down\(/{flag=0} flag' "$file")
+
+            if printf '%s' "$up" | grep -qE 'dropColumn|renameColumn|dropIfExists|->change\(\)'; then
               if grep -q 'expand-contract-reviewed' "$file"; then
                 echo "OK  $file (explicitly reviewed)"
               else

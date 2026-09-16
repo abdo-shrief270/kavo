@@ -23,8 +23,10 @@ use App\Modules\Platform\Observability\Console\SlowQueries;
 use App\Modules\Platform\Observability\Services\RequestContext;
 use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
+use App\Shared\Contracts\ResolvesHosts;
 use App\Shared\Contracts\WhatsAppGateway;
 use App\Shared\Events\QuotaThresholdReached;
+use App\Shared\Http\SystemHostResolver;
 use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantDatabaseSession;
 use Illuminate\Console\Scheduling\Schedule;
@@ -54,6 +56,10 @@ final class PlatformServiceProvider extends ServiceProvider
         $this->app->singleton(Entitlements::class, EntitlementService::class);
         $this->app->singleton(AnalyticsIngestor::class, BufferedAnalyticsIngestor::class);
 
+        // Behind the container so tests can hand the destination guard
+        // answers that public DNS will never give them.
+        $this->app->singleton(ResolvesHosts::class, SystemHostResolver::class);
+
         $this->bindWhatsAppGateway();
         $this->bindPaymentGateways();
     }
@@ -73,7 +79,6 @@ final class PlatformServiceProvider extends ServiceProvider
             (string) config('services.paymob.api_key'),
             (string) config('services.paymob.integration_id'),
             (string) config('services.paymob.iframe_id'),
-            (string) config('services.paymob.hmac_secret'),
         ));
 
         $this->app->bind(FawryGateway::class, fn ($app) => new FawryGateway(

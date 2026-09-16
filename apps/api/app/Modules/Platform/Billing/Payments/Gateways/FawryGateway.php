@@ -61,7 +61,7 @@ final readonly class FawryGateway implements PaymentGateway
 
         $payload = [
             'merchantCode' => $this->merchantCode,
-            'merchantRefNum' => $request->reference,
+            'merchantRefNum' => $request->publicReference,
             'customerName' => $request->customerName,
             'customerMobile' => $request->customerPhone,
             'customerEmail' => $request->customerEmail,
@@ -71,7 +71,7 @@ final readonly class FawryGateway implements PaymentGateway
             'currencyCode' => $request->amount->currency,
             'paymentExpiry' => now()->addHours($expiryHours)->getTimestampMs(),
             'chargeItems' => [[
-                'itemId' => $request->reference,
+                'itemId' => $request->publicReference,
                 'description' => $request->metadata['description'] ?? 'Order '.$request->reference,
                 'price' => number_format($request->amount->amountCents / 100, 2, '.', ''),
                 'quantity' => 1,
@@ -174,7 +174,7 @@ final readonly class FawryGateway implements PaymentGateway
 
         return hash('sha256', implode('', [
             $this->merchantCode,
-            $request->reference,
+            $request->publicReference,
             $request->customerPhone,
             'PAYATFAWRY',
             $amount,

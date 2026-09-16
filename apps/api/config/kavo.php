@@ -4,6 +4,7 @@ use App\Modules\Platform\Billing\Payments\Gateways\FakeGateway;
 use App\Modules\Platform\Billing\Payments\Gateways\FawryGateway;
 use App\Modules\Platform\Billing\Payments\Gateways\PaymobGateway;
 use App\Modules\Platform\Webhooks\Verifiers\BeOnWebhookVerifier;
+use App\Modules\Platform\Webhooks\Verifiers\FawryWebhookVerifier;
 use App\Modules\Platform\Webhooks\Verifiers\PaymobWebhookVerifier;
 
 return [
@@ -84,6 +85,9 @@ return [
         'verifiers' => [
             'beon' => BeOnWebhookVerifier::class,
             'paymob' => PaymobWebhookVerifier::class,
+            // Without this entry /webhooks/fawry 404s, and a reference
+            // payment has no other way to ever become paid.
+            'fawry' => FawryWebhookVerifier::class,
         ],
 
         'outbound' => [

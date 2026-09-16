@@ -6,6 +6,8 @@ namespace App\Modules\Platform\Webhooks\Jobs;
 
 use App\Modules\Platform\Identity\Models\Tenant;
 use App\Modules\Platform\Webhooks\Models\WebhookDelivery;
+use App\Shared\Exceptions\UnroutableEndpoint;
+use App\Shared\Http\PublicEndpointGuard;
 use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantDatabaseSession;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +32,7 @@ final class DeliverOutboundWebhook implements ShouldQueue
         public readonly int $deliveryId,
     ) {}
 
-    public function handle(Http $http, TenantContext $context, TenantDatabaseSession $session): void
+    public function handle(Http $http, TenantContext $context, TenantDatabaseSession $session, PublicEndpointGuard $guard): void
     {
         $tenant = Tenant::query()->find($this->tenantId);
 
@@ -41,12 +43,12 @@ final class DeliverOutboundWebhook implements ShouldQueue
         // runBound, not bind/clear: on the sync queue — or via dispatchSync —
         // this runs inline inside a request that already has a tenant bound,
         // and clearing it there strands the rest of that request.
-        $context->runAs($tenant, function () use ($http, $session, $tenant): void {
-            $session->runBound($tenant->getKey(), fn () => $this->deliver($http));
+        $context->runAs($tenant, function () use ($http, $session, $tenant, $guard): void {
+            $session->runBound($tenant->getKey(), fn () => $this->deliver($http, $guard));
         });
     }
 
-    private function deliver(Http $http): void
+    private function deliver(Http $http, PublicEndpointGuard $guard): void
     {
         $delivery = WebhookDelivery::with('subscription')->find($this->deliveryId);
 
@@ -61,6 +63,18 @@ final class DeliverOutboundWebhook implements ShouldQueue
         }
 
         $attempt = $delivery->attempt + 1;
+
+        // Re-checked on every attempt, not only at registration: the name was
+        // publicly routable when the tenant added it, and DNS is theirs to
+        // change afterwards.
+        try {
+            $endpoint = $guard->check($subscription->url);
+        } catch (UnroutableEndpoint $e) {
+            $this->refuse($delivery, $attempt, $e->getMessage());
+
+            return;
+        }
+
         $timestamp = (string) now()->timestamp;
         $body = json_encode($delivery->payload, JSON_THROW_ON_ERROR);
 
@@ -78,8 +92,16 @@ final class DeliverOutboundWebhook implements ShouldQueue
                     'X-Kavo-Signature' => $signature,
                 ])
                 ->timeout(15)
+                // A 302 to http://169.254.169.254/ is the cheapest way around
+                // a check that only looked at the URL we were given, and the
+                // body of whatever answered would land in response_body for
+                // the tenant to read back.
+                ->withoutRedirecting()
+                // And the connection goes to the address that was checked,
+                // rather than to whatever DNS answers a moment later.
+                ->withOptions($endpoint->pinnedRequestOptions())
                 ->withBody($body, 'application/json')
-                ->post($subscription->url);
+                ->post($endpoint->url);
         } catch (\Throwable $e) {
             $this->recordFailure($delivery, $attempt, null, $e->getMessage());
 
@@ -102,6 +124,26 @@ final class DeliverOutboundWebhook implements ShouldQueue
         }
 
         $this->recordFailure($delivery, $attempt, $response->status(), mb_substr($response->body(), 0, 2000));
+    }
+
+    /**
+     * A destination we will not send to is not a transient failure, so it is
+     * dead-lettered on the spot rather than retried on a backoff. It still
+     * lands in the dashboard: a subscription that silently stopped delivering
+     * is worse than one that says why.
+     */
+    private function refuse(WebhookDelivery $delivery, int $attempt, string $reason): void
+    {
+        $delivery->update([
+            'status' => 'dead_lettered',
+            'attempt' => $attempt,
+            'status_code' => null,
+            'response_body' => 'Refused: '.$reason,
+            'failed_at' => now(),
+            'next_attempt_at' => null,
+        ]);
+
+        $this->penalise($delivery);
     }
 
     private function recordFailure(WebhookDelivery $delivery, int $attempt, ?int $status, string $body): void

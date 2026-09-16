@@ -7,6 +7,7 @@ namespace App\Modules\Platform\Webhooks\Http\Controllers;
 use App\Modules\Platform\Audit\Services\AuditRecorder;
 use App\Modules\Platform\Webhooks\Models\WebhookDelivery;
 use App\Modules\Platform\Webhooks\Models\WebhookSubscription;
+use App\Modules\Platform\Webhooks\Rules\PubliclyRoutableUrl;
 use App\Modules\Platform\Webhooks\Services\WebhookDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,9 +23,11 @@ final class WebhookSubscriptionController
     public function store(Request $request, AuditRecorder $audit): JsonResponse
     {
         $validated = $request->validate([
-            // Public https only: a plaintext or internal endpoint would leak
-            // the payload, and an internal one turns this into SSRF.
-            'url' => ['required', 'url:https', 'max:2048'],
+            // `url:https` only describes the string. The rule resolves the
+            // host as well, because an https URL whose name points at
+            // 169.254.169.254 is still an internal fetch we would make on the
+            // tenant's behalf and hand the response back to them.
+            'url' => ['required', 'url:https', 'max:2048', app(PubliclyRoutableUrl::class)],
             'event_types' => ['required', 'array', 'min:1'],
             'event_types.*' => ['string', 'max:64'],
         ]);

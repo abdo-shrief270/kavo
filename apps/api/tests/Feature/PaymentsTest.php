@@ -15,6 +15,8 @@ use App\Modules\Platform\Billing\Payments\SettlementNotice;
 use App\Modules\Platform\Identity\Models\Tenant;
 use App\Shared\Enums\PaymentStatus;
 use App\Shared\Events\PaymentSettled;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -51,6 +53,7 @@ final class PaymentsTest extends TestCase
     {
         return new PaymentRequest(
             reference: $reference ?? 'order-'.Str::lower(Str::random(8)),
+            publicReference: 'kv_'.Str::lower((string) Str::ulid()),
             amount: Money::egp(49900),
             rail: $rail,
             customerName: 'Mona Adel',
@@ -139,7 +142,7 @@ final class PaymentsTest extends TestCase
         Event::assertNotDispatched(PaymentSettled::class);
 
         $settled = app(PaymentService::class)->settle(new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Succeeded,
             gatewayReference: 'fawry-ref-1',
             amountCents: 49900,
@@ -185,7 +188,7 @@ final class PaymentsTest extends TestCase
         ]);
 
         $result = app(PaymentService::class)->settle(new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Succeeded,
             amountCents: $intent->amount_cents,
             externalEventId: 'evt-late',
@@ -209,7 +212,7 @@ final class PaymentsTest extends TestCase
         $intent = app(PaymentService::class)->charge($this->request(PaymentRail::Reference));
 
         $notice = new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Succeeded,
             amountCents: 49900,
             externalEventId: 'evt-once',
@@ -238,7 +241,7 @@ final class PaymentsTest extends TestCase
         $intent = app(PaymentService::class)->charge($this->request(PaymentRail::Reference));
 
         $notice = new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Processing,
             amountCents: 49900,
             externalEventId: 'evt-processing',
@@ -257,7 +260,7 @@ final class PaymentsTest extends TestCase
         $intent = app(PaymentService::class)->charge($this->request(PaymentRail::Reference));
 
         $result = app(PaymentService::class)->settle(new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Succeeded,
             // Half what we asked for: either a provider bug or a tampered
             // payload. Neither is applied automatically.
@@ -273,7 +276,7 @@ final class PaymentsTest extends TestCase
     public function a_settlement_for_an_unknown_reference_is_ignored_rather_than_guessed(): void
     {
         $result = app(PaymentService::class)->settle(new SettlementNotice(
-            reference: 'order-does-not-exist',
+            reference: 'kv_does-not-exist',
             status: PaymentStatus::Succeeded,
         ), 'fake');
 
@@ -286,7 +289,7 @@ final class PaymentsTest extends TestCase
         $intent = app(PaymentService::class)->charge($this->request(PaymentRail::Reference));
 
         app(PaymentService::class)->settle(new SettlementNotice(
-            reference: $intent->reference,
+            reference: $intent->public_reference,
             status: PaymentStatus::Succeeded,
             amountCents: 49900,
             externalEventId: 'evt-history',
@@ -441,5 +444,33 @@ final class PaymentsTest extends TestCase
         $this->assertSame('order-1001', $theirs->reference);
         $this->assertSame($other->getKey(), $theirs->tenant_id);
         $this->assertSame(1, PaymentIntent::query()->where('reference', 'order-1001')->count());
+    }
+
+    /**
+     * The database, not the application, is what keeps the reference the
+     * gateway sees unambiguous.
+     */
+    #[Test]
+    public function a_public_reference_cannot_be_reused_by_another_tenant(): void
+    {
+        $mine = app(PaymentService::class)->charge($this->request(PaymentRail::Card, reference: 'order-1001'));
+
+        $attacker = Tenant::factory()->create();
+
+        $this->expectException(QueryException::class);
+
+        // Wrapped so the constraint violation rolls back to a savepoint rather
+        // than poisoning the test's own transaction.
+        DB::transaction(fn () => $this->asTenant($attacker, fn () => app(PaymentService::class)->charge(
+            new PaymentRequest(
+                reference: 'order-1001',
+                publicReference: $mine->public_reference,
+                amount: Money::egp(49900),
+                rail: PaymentRail::Card,
+                customerName: 'Mona Adel',
+                customerEmail: 'mona@example.test',
+                customerPhone: '+201000000001',
+            ),
+        )));
     }
 }

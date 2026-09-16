@@ -12,3 +12,6 @@ dist/
 .nitro/
 .cache/
 coverage/
+
+# Redis snapshots, written wherever redis-server happened to be started.
+dump.rdb

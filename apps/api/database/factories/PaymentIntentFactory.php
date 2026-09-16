@@ -19,6 +19,7 @@ final class PaymentIntentFactory extends Factory
     {
         return [
             'reference' => 'order-'.Str::lower(Str::random(10)),
+            'public_reference' => 'kv_'.Str::lower((string) Str::ulid()),
             'gateway' => 'fake',
             'rail' => PaymentRail::Card,
             'status' => PaymentStatus::Pending,

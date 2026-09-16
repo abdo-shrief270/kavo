@@ -29,7 +29,6 @@ final readonly class PaymobGateway implements PaymentGateway
         private string $apiKey,
         private string $integrationId,
         private string $iframeId,
-        private string $hmacSecret,
     ) {}
 
     public function name(): string
@@ -141,42 +140,6 @@ final readonly class PaymobGateway implements PaymentGateway
             : PaymentResult::failed((string) $response->body());
     }
 
-    /** HMAC over Paymob's fixed field ordering — not over the raw body. */
-    public function settlementSignatureIsValid(array $payload, string $signature): bool
-    {
-        $object = $payload['obj'] ?? [];
-
-        $ordered = [
-            $object['amount_cents'] ?? '',
-            $object['created_at'] ?? '',
-            $object['currency'] ?? '',
-            $object['error_occured'] ?? '',
-            $object['has_parent_transaction'] ?? '',
-            $object['id'] ?? '',
-            $object['integration_id'] ?? '',
-            $object['is_3d_secure'] ?? '',
-            $object['is_auth'] ?? '',
-            $object['is_capture'] ?? '',
-            $object['is_refunded'] ?? '',
-            $object['is_standalone_payment'] ?? '',
-            $object['is_voided'] ?? '',
-            $object['order']['id'] ?? '',
-            $object['owner'] ?? '',
-            $object['pending'] ?? '',
-            $object['source_data']['pan'] ?? '',
-            $object['source_data']['sub_type'] ?? '',
-            $object['source_data']['type'] ?? '',
-            $object['success'] ?? '',
-        ];
-
-        $concatenated = implode('', array_map(
-            static fn (mixed $value): string => is_bool($value) ? ($value ? 'true' : 'false') : (string) $value,
-            $ordered,
-        ));
-
-        return hash_equals(hash_hmac('sha512', $concatenated, $this->hmacSecret), $signature);
-    }
-
     private function authenticate(): ?string
     {
         $response = $this->http->acceptJson()->timeout(15)
@@ -193,7 +156,7 @@ final readonly class PaymobGateway implements PaymentGateway
                 'delivery_needed' => false,
                 'amount_cents' => $request->amount->amountCents,
                 'currency' => $request->amount->currency,
-                'merchant_order_id' => $request->reference,
+                'merchant_order_id' => $request->publicReference,
                 'items' => [],
             ]);
 

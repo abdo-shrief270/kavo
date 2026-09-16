@@ -722,6 +722,96 @@ and pnpm — are real on the box and stubbed in rehearsal, so a first production
 deploy still needs watching. What is proven is the logic around them, which is
 where the failure modes actually live.
 
+### A10. Cross-tenant settlement hijack, and the test that should have caught it
+
+An independent review of the branch found it; it is the most serious defect
+this phase produced, and it was reachable by anyone who could sign up.
+
+`payment_intents` is unique on `(tenant_id, reference)` — deliberately, because
+two merchants may both have an `order-1001`. Settlement resolved the owning
+tenant by that same `reference`, on the schema-owner connection, with no tenant
+bound and no `ORDER BY`. That lookup is the one place in the system where
+neither isolation layer is watching: the Eloquent scope needs a tenant in
+context and RLS is bypassed by the owner role, both by design, because a
+provider callback arrives with no session at all.
+
+So an attacker who signed up and pre-created `order-1001` collected the next
+tenant's `order-1001` settlement: their intent was marked paid, the victim's
+stayed unpaid, and the provider's full payload — customer name, phone, card
+metadata — was written to a `payment_events` row the attacker reads back over
+the API.
+
+The uncomfortable part is that a test named
+`two_tenants_can_hold_the_same_reference` already existed, asserting the exact
+precondition, and nothing asserted what settlement then did with it. Proving a
+property is safe to have is not the same as proving the code that consumes it
+is safe.
+
+**The fix.** `public_reference` — platform-generated `kv_<ulid>`, globally
+unique, added by migration with a backfill before the index. It is now the only
+identifier sent to a gateway and the only one matched on the way back, so a
+callback resolves to exactly one tenant or to none. The merchant's `reference`
+stays exactly as it was: theirs, unique per tenant, and never used to answer a
+cross-tenant question. `tenantFor()` also refuses to guess when a lookup
+somehow returns two rows — unreachable behind the unique index, kept because
+failing closed on that query is worth more than the query costs.
+
+`SettlementRoutingTest` covers it, and cannot be transactional: the lookup runs
+on a second connection, so a fixture inside the test's own transaction would be
+invisible to the code under test and the tests would pass for the wrong reason.
+They commit and truncate instead. Reverting the lookup to `reference` fails
+them.
+
+### A11. Three endpoints that only a third party ever calls
+
+The same review surfaced a read SSRF, and walking the callback surface
+afterwards found three more breaks. All four share a shape: nothing in normal
+use touches them, and every one fails closed, so the symptom is silence —
+indistinguishable from "no customer has paid yet".
+
+**Outbound webhook delivery was a read SSRF.** `url:https` validates the
+string, not the destination; Guzzle follows redirects by default. A tenant
+endpoint answering `302 → http://169.254.169.254/` put the cloud metadata
+service's response into `webhook_deliveries.response_body`, readable over
+`GET /api/webhooks/deliveries`. Now: the host is resolved and every answer
+checked against private, loopback, link-local, CGNAT and the other
+non-routable ranges — at registration *and* before every attempt, because DNS
+is the tenant's to change afterwards — redirects are refused, and the
+connection is pinned with `CURLOPT_RESOLVE` to the address that was checked, so
+the name cannot mean something else a millisecond later. DNS sits behind
+`ResolvesHosts` so the rules are testable against answers no registrar would
+sell.
+
+**`/webhooks/fawry` returned 404.** `FawryWebhookVerifier` existed and was
+never listed in `kavo.webhooks.verifiers`, and an unlisted provider is refused
+rather than accepted unverified — correct, and in this case it meant the
+reference rail could never complete a sale. The customer pays at a kiosk with
+no connection to us; the callback is not an optimisation, it is the mechanism.
+
+**Both payment verifiers checked the wrong signature.** Each extended a
+generic raw-body HMAC-SHA256, and neither provider signs that way: Fawry sends
+a plain SHA-256 digest over a documented field concatenation, in the body as
+`messageSignature`; Paymob appends `?hmac=` and signs an ordered subset of the
+transaction with HMAC-SHA512. Every genuine callback would have been rejected
+as forged. Paymob's real algorithm was in the codebase the whole time, as a
+public method on `PaymobGateway` that nothing called — module boundaries put
+it out of the verifier's reach, so it was written twice and used never. It now
+lives in the verifier, and the gateway's copy is gone. `services.paymob` also
+had two settings for Paymob's single secret, which is how the gateway and the
+verifier ended up reading different values; there is one now.
+
+**On-demand TLS would have refused every certificate.** `TlsAskController`
+expected a shared secret in `X-Caddy-Token`, and Caddy's `on_demand_tls ask`
+is a bare GET with no way to set a header — so the check could only ever 403,
+and no tenant custom domain would have got a certificate. The token moves to
+the query string, which is what Caddy can send: it is in the URL rather than
+absent, the endpoint is loopback-only, and the gate that actually matters is
+still `hostnameIsIssuable`.
+
+`ProviderCallbackTest` covers all three, including tampered amounts and the
+old raw-body shape being rejected, and `OutboundWebhookDeliveryTest` covers
+the SSRF cases down to the pinned resolve entry.
+
 ---
 
 ## Phase 0 status
@@ -738,8 +828,8 @@ checklist stands as follows.
 | Sign up → plan → quota → blocked/warned | ✅ End to end, 402 with an upgrade prompt |
 | Custom domain verified, SSL automatic | Verification ✅; **no certificate has been issued** |
 | Email, in-app and WhatsApp delivered and logged | ✅ Path built and tested; no live BeOn credentials |
-| Inbound webhook processed idempotently | ✅ Replay tested |
-| Outbound webhook retried and dead-lettered | Coded; not exercised against a failing endpoint |
+| Inbound webhook processed idempotently | ✅ Replay tested; Fawry and Paymob signatures now verified as the providers actually sign |
+| Outbound webhook retried and dead-lettered | ✅ Exercised: backoff, dead-letter, subscription disabled, destination refused |
 | Reverb delivers to an authorised channel, rejects others | Rejection ✅ tested; delivery ✅ dispatched, not observed over a live socket |
 | Sentry receiving tagged errors, both halves | Wired; **no DSN has been exercised** |
 | Slow query logging with tenant and route | ✅ Verified at runtime |

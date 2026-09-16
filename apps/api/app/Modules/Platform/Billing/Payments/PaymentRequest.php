@@ -14,7 +14,16 @@ namespace App\Modules\Platform\Billing\Payments;
 final readonly class PaymentRequest
 {
     public function __construct(
+        /** The merchant's own reference. Unique only within their tenant. */
         public string $reference,
+
+        /**
+         * Platform-generated, globally unique, and the ONLY thing sent to the
+         * gateway as its merchant reference. A callback carries this back, so
+         * it resolves to exactly one tenant — `reference` cannot, because two
+         * tenants may legitimately both have an order-1001.
+         */
+        public string $publicReference,
         public Money $amount,
         public PaymentRail $rail,
         public string $customerName,

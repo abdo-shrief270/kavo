@@ -46,8 +46,9 @@ return [
         'api_key' => env('PAYMOB_API_KEY'),
         'integration_id' => env('PAYMOB_INTEGRATION_ID'),
         'iframe_id' => env('PAYMOB_IFRAME_ID'),
+        // Paymob has exactly one HMAC secret. Two settings for it is how the
+        // verifier and the gateway ended up reading different values.
         'hmac_secret' => env('PAYMOB_HMAC_SECRET'),
-        'webhook_secret' => env('PAYMOB_WEBHOOK_SECRET'),
     ],
 
     'fawry' => [

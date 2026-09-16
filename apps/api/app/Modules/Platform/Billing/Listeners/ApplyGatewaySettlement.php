@@ -75,14 +75,37 @@ final readonly class ApplyGatewaySettlement
      * payment_intents is behind RLS, so this reads through the schema owner —
      * the one lookup that legitimately spans tenants, and the mirror of the
      * hostname lookup ResolveTenant does before a tenant is known.
+     *
+     * Matched on `public_reference`. The merchant's own `reference` is unique
+     * only per tenant, so resolving on it here would let one tenant claim
+     * another's settlement simply by registering the same order number first:
+     * the lookup runs on a BYPASSRLS connection with no tenant bound, so
+     * neither isolation layer would catch the mis-resolution, and everything
+     * downstream would then run bound to the wrong tenant.
+     *
+     * The ambiguity guard below should be unreachable — `public_reference`
+     * carries a unique index — and is kept because failing closed on a
+     * cross-tenant lookup is worth more than the query it costs.
      */
-    private function tenantFor(string $reference, string $gateway): ?Tenant
+    private function tenantFor(string $publicReference, string $gateway): ?Tenant
     {
-        $tenantId = DB::connection(config('kavo.tenancy.owner_connection'))
+        $tenantIds = DB::connection(config('kavo.tenancy.owner_connection'))
             ->table('payment_intents')
-            ->where('reference', $reference)
+            ->where('public_reference', $publicReference)
             ->where('gateway', $gateway)
-            ->value('tenant_id');
+            ->limit(2)
+            ->pluck('tenant_id');
+
+        if ($tenantIds->count() > 1) {
+            Log::critical('Ambiguous settlement reference — refusing to guess a tenant', [
+                'gateway' => $gateway,
+                'public_reference' => $publicReference,
+            ]);
+
+            return null;
+        }
+
+        $tenantId = $tenantIds->first();
 
         return $tenantId === null ? null : Tenant::query()->find($tenantId);
     }

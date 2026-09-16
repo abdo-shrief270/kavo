@@ -18,7 +18,7 @@ final class PaymentIntent extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tenant_id', 'reference', 'gateway', 'rail', 'status', 'amount_cents', 'currency',
+        'tenant_id', 'reference', 'public_reference', 'gateway', 'rail', 'status', 'amount_cents', 'currency',
         'gateway_reference', 'payment_reference', 'redirect_url', 'expires_at', 'settled_at',
         'refunded_cents', 'last_error', 'metadata',
     ];

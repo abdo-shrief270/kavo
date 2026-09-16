@@ -9,7 +9,10 @@
 		# Caddy asks before issuing a certificate for an unknown hostname.
 		# Without this gate anyone could point a hostname at us and have us
 		# request certificates on their behalf until we hit a rate limit.
-		ask http://127.0.0.1:8000/internal/tls-ask
+		# The token rides in the query string because `ask` is a bare GET
+		# with no way to set a header. Caddy appends &domain= to whatever
+		# is already here.
+		ask http://127.0.0.1:8000/internal/tls-ask?token={$KAVO_TLS_ASK_TOKEN}
 		interval 2m
 		burst 8
 	}

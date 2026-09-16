@@ -68,6 +68,10 @@ final class PaymentController
 
         $intent = $payments->charge(new PaymentRequest(
             reference: $validated['reference'],
+            // Platform-generated and globally unique. The merchant never
+            // chooses this, which is what stops one tenant claiming another's
+            // settlement by registering the same order number first.
+            publicReference: 'kv_'.Str::lower((string) Str::ulid()),
             amount: new Money($validated['amount_cents'], strtoupper($validated['currency'])),
             rail: PaymentRail::from($validated['rail']),
             customerName: $validated['customer_name'],

@@ -48,6 +48,7 @@ final readonly class PaymentService
         $intent = PaymentIntent::create([
             'tenant_id' => $tenant->getKey(),
             'reference' => $request->reference,
+            'public_reference' => $request->publicReference,
             'gateway' => $gateway->name(),
             'rail' => $request->rail,
             'status' => PaymentStatus::Pending,
@@ -66,14 +67,15 @@ final readonly class PaymentService
     /**
      * Apply a verified settlement from a provider callback.
      *
-     * Matching is on our own reference, scoped to the tenant: a provider
-     * echoes back what we sent, and two tenants may legitimately both have an
-     * order-1001.
+     * Matched on `public_reference`, which is platform-generated and globally
+     * unique. Matching on the merchant's own `reference` would be a
+     * cross-tenant hijack: it is unique only per tenant, so a callback could
+     * resolve to a different tenant's intent and settle a stranger's payment.
      */
     public function settle(SettlementNotice $notice, string $gatewayName): ?PaymentIntent
     {
         $intent = PaymentIntent::query()
-            ->where('reference', $notice->reference)
+            ->where('public_reference', $notice->reference)
             ->where('gateway', $gatewayName)
             ->first();
 
