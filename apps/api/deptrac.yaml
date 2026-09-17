@@ -89,6 +89,14 @@ deptrac:
         - type: directory
           value: app/Modules/Platform/Audit/.*
 
+    # Added in a later slice and never registered here. With
+    # --fail-on-uncovered that is not a gap the gate tolerates — it is the
+    # gate failing, which nobody saw because the gate had never run.
+    - name: Observability
+      collectors:
+        - type: directory
+          value: app/Modules/Platform/Observability/.*
+
   # Shared is meant to be the bottom of the stack, and it is — except that its
   # whole subject is tenancy, and a tenancy primitive deals in tenants. The
   # Tenant model lives in Identity because that is where it belongs, so four
@@ -194,6 +202,12 @@ deptrac:
       - Models
       - Identity
 
+    Observability:
+      - Shared
+      - Support
+      - Models
+      - Identity
+
     Providers:
       - Shared
       - Support
@@ -209,6 +223,7 @@ deptrac:
       - Realtime
       - Analytics
       - Audit
+      - Observability
 
     Http:
       - Shared
