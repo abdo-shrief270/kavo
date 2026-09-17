@@ -25,6 +25,7 @@ use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
 use App\Shared\Contracts\ResolvesHosts;
 use App\Shared\Contracts\WhatsAppGateway;
+use App\Shared\Events\InboundWebhookReceived;
 use App\Shared\Events\QuotaThresholdReached;
 use App\Shared\Http\SystemHostResolver;
 use App\Shared\Tenancy\TenantContext;
@@ -160,11 +161,11 @@ final class PlatformServiceProvider extends ServiceProvider
 
         // Settlement is the only way an offline payment ever becomes paid, so
         // every payment provider's callbacks route into the same handler.
-        foreach (['paymob', 'fawry', 'fake'] as $provider) {
-            foreach (['transaction', 'orderStatus', 'PAID', 'EXPIRED', 'CANCELED', 'REFUNDED', 'unknown'] as $type) {
-                Event::listen("webhook.{$provider}.{$type}", [ApplyGatewaySettlement::class, 'handle']);
-            }
-        }
+        // One registration, for every inbound callback. The listener decides
+        // whether the provider is one it settles payments for; a matrix of
+        // guessed provider event-type strings decided that by accident, and
+        // Paymob's real "TRANSACTION" did not match the "transaction" in it.
+        Event::listen(InboundWebhookReceived::class, [ApplyGatewaySettlement::class, 'handle']);
     }
 
     private function registerCommands(): void

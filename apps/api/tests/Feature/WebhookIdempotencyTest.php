@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Modules\Platform\Webhooks\Jobs\ProcessInboundWebhook;
 use App\Modules\Platform\Webhooks\Models\WebhookEvent;
+use App\Shared\Events\InboundWebhookReceived;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -127,7 +128,16 @@ final class WebhookIdempotencyTest extends TestCase
         (new ProcessInboundWebhook($event->id))->handle();
         (new ProcessInboundWebhook($event->id))->handle();
 
-        Event::assertDispatchedTimes('webhook.beon.message.delivered', 1);
+        Event::assertDispatchedTimes(InboundWebhookReceived::class, 1);
+
+        // And it carries what a listener needs without handing over the
+        // receiving module's model.
+        Event::assertDispatched(InboundWebhookReceived::class, function (InboundWebhookReceived $received): bool {
+            return $received->provider === 'beon'
+                && $received->eventType === 'message.delivered'
+                && $received->externalEventId === 'evt_once'
+                && $received->payload === ['event_id' => 'evt_once'];
+        });
 
         $this->assertNotNull($event->fresh()->processed_at);
     }

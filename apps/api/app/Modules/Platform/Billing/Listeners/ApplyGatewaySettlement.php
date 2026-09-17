@@ -8,7 +8,7 @@ use App\Modules\Platform\Billing\Payments\DuplicateSettlement;
 use App\Modules\Platform\Billing\Payments\PaymentGatewayManager;
 use App\Modules\Platform\Billing\Payments\PaymentService;
 use App\Modules\Platform\Identity\Models\Tenant;
-use App\Modules\Platform\Webhooks\Models\WebhookEvent;
+use App\Shared\Events\InboundWebhookReceived;
 use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantDatabaseSession;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +30,16 @@ final readonly class ApplyGatewaySettlement
         private TenantDatabaseSession $session,
     ) {}
 
-    public function handle(WebhookEvent $event): void
+    public function handle(InboundWebhookReceived $event): void
     {
+        // Every inbound callback arrives here, including ones from providers
+        // that have nothing to do with payments.
+        if (! array_key_exists($event->provider, (array) config('kavo.payments.gateways', []))) {
+            return;
+        }
+
         $gateway = $this->gateways->gateway($event->provider);
-        $notice = $gateway->parseSettlement($event->payload ?? []);
+        $notice = $gateway->parseSettlement($event->payload);
 
         // Not every callback is a settlement — a template status change or a
         // test ping is acknowledged without inventing a payment event.

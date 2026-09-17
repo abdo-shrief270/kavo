@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Platform\Webhooks\Jobs;
 
 use App\Modules\Platform\Webhooks\Models\WebhookEvent;
+use App\Shared\Events\InboundWebhookReceived;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +51,17 @@ final class ProcessInboundWebhook implements ShouldQueue
         }
 
         try {
-            Event::dispatch('webhook.'.$event->provider.'.'.($event->event_type ?? 'unknown'), [$event]);
+            // A typed event, not a string assembled from the provider's own
+            // vocabulary. The string form meant a listener had to be
+            // registered against every event-type a provider might send, and
+            // guessing one wrong is silent: the callback is accepted, marked
+            // processed, and acted on by nobody.
+            Event::dispatch(new InboundWebhookReceived(
+                provider: $event->provider,
+                eventType: $event->event_type,
+                externalEventId: $event->external_event_id,
+                payload: $event->payload ?? [],
+            ));
         } catch (\Throwable $e) {
             // Release the claim so a retry can pick it up; leaving it claimed
             // would silently drop the event.

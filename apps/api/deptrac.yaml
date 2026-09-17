@@ -172,12 +172,18 @@ deptrac:
       - Support
       - Models
       - Identity
+      # Uploads are audited like every other tenant-visible write. Audit was
+      # listed for every module that records one except this one.
+      - Audit
 
     Notifications:
       - Shared
       - Support
       - Models
       - Identity
+      # Realtime is a delivery channel like mail or WhatsApp, and choosing
+      # channels is what this module is for.
+      - Realtime
 
     Webhooks:
       - Shared

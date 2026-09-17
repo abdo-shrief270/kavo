@@ -11,8 +11,10 @@ use App\Modules\Platform\Billing\Payments\PaymentRail;
 use App\Modules\Platform\Billing\Payments\PaymentRequest;
 use App\Modules\Platform\Billing\Payments\PaymentService;
 use App\Modules\Platform\Identity\Models\Tenant;
+use App\Modules\Platform\Webhooks\Jobs\ProcessInboundWebhook;
 use App\Modules\Platform\Webhooks\Models\WebhookEvent;
 use App\Shared\Enums\PaymentStatus;
+use App\Shared\Events\InboundWebhookReceived;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -204,13 +206,13 @@ final class SettlementRoutingTest extends TestCase
         ));
     }
 
-    private function settlement(string $publicReference): WebhookEvent
+    private function settlement(string $publicReference): InboundWebhookReceived
     {
-        return new WebhookEvent([
-            'provider' => 'fake',
-            'external_event_id' => 'evt-settle-1001',
-            'event_type' => 'payment.settled',
-            'payload' => [
+        return new InboundWebhookReceived(
+            provider: 'fake',
+            eventType: 'payment.settled',
+            externalEventId: 'evt-settle-1001',
+            payload: [
                 'reference' => $publicReference,
                 'status' => PaymentStatus::Succeeded->value,
                 'amount_cents' => 49900,
@@ -220,6 +222,49 @@ final class SettlementRoutingTest extends TestCase
                 // readable history.
                 'customer' => ['name' => 'Mona Adel', 'phone' => '+201000000001'],
             ],
+        );
+    }
+
+    /**
+     * The whole path, not just the listener.
+     *
+     * The job names its event by string — webhook.{provider}.{type} — and the
+     * listener is registered against a hardcoded list of those strings. A
+     * mismatch between the two is silent: the callback is accepted, marked
+     * processed and never acted on, so the payment simply stays unpaid. The
+     * unit-level tests above pass either way, because they call the listener
+     * directly.
+     */
+    #[Test]
+    public function an_inbound_callback_travels_from_the_queued_job_to_a_settled_payment(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $intent = $this->issue($tenant, 'order-2002');
+
+        $event = WebhookEvent::query()->create([
+            'provider' => 'fake',
+            'external_event_id' => 'evt-end-to-end',
+            'event_type' => PaymentStatus::Succeeded->value,
+            'payload' => [
+                'reference' => $intent->public_reference,
+                'status' => PaymentStatus::Succeeded->value,
+                'amount_cents' => 49900,
+                'event_id' => 'evt-end-to-end',
+            ],
+            'signature_valid' => true,
+            'received_at' => now(),
         ]);
+
+        $this->forgetTenant();
+
+        (new ProcessInboundWebhook($event->getKey()))->handle();
+
+        $this->assertSame(
+            PaymentStatus::Succeeded,
+            $this->asTenant($tenant, fn () => PaymentIntent::query()->find($intent->getKey()))->status,
+        );
+
+        // Claimed, so a provider retry of the same event does not settle twice.
+        $this->assertNotNull($event->refresh()->processed_at);
     }
 }
