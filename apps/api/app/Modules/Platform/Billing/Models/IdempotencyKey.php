@@ -7,7 +7,22 @@ namespace App\Modules\Platform\Billing\Models;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $key
+ * @property string $method
+ * @property string $path
+ * @property string $request_hash
+ * @property ?int $response_status
+ * @property ?array $response_body
+ * @property ?Carbon $locked_at
+ * @property Carbon $expires_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class IdempotencyKey extends Model
 {
     use BelongsToTenant;

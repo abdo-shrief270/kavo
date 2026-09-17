@@ -9,10 +9,22 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Append-only transition log. Never updated, never deleted — it is the record
  * that settles a dispute about what the gateway said and when.
+ *
+ * @property int $id
+ * @property int $tenant_id
+ * @property int $payment_intent_id
+ * @property ?PaymentStatus $from_status
+ * @property PaymentStatus $to_status
+ * @property string $source
+ * @property ?string $external_event_id
+ * @property array $payload
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 final class PaymentEvent extends Model
 {
@@ -33,6 +45,7 @@ final class PaymentEvent extends Model
         ];
     }
 
+    /** @return BelongsTo<PaymentIntent, $this> */
     public function intent(): BelongsTo
     {
         return $this->belongsTo(PaymentIntent::class, 'payment_intent_id');

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -21,6 +22,20 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable(['name', 'email', 'password', 'phone', 'is_platform_admin', 'active_tenant_id'])]
 #[Hidden(['password', 'remember_token'])]
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property ?Carbon $email_verified_at
+ * @property string $password
+ * @property ?string $remember_token
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ * @property bool $is_platform_admin
+ * @property ?int $active_tenant_id
+ * @property ?string $phone
+ * @property ?Carbon $last_seen_at
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -39,6 +54,7 @@ class User extends Authenticatable
         ];
     }
 
+    /** @return BelongsToMany<Tenant, $this> */
     public function tenants(): BelongsToMany
     {
         return $this->belongsToMany(Tenant::class)

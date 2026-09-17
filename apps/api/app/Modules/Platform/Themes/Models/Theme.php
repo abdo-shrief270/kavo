@@ -7,8 +7,20 @@ namespace App\Modules\Platform\Themes\Models;
 use App\Shared\Enums\Product;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /** Theme definitions are platform catalogue; per-tenant overrides live elsewhere. */
+/**
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property Product $product
+ * @property string $version
+ * @property array $manifest
+ * @property bool $is_active
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class Theme extends Model
 {
     use HasFactory;

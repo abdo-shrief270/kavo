@@ -7,7 +7,17 @@ namespace App\Modules\Platform\Billing\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $plan_id
+ * @property string $feature_key
+ * @property ?int $limit_value
+ * @property string $overage_behavior
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class PlanFeature extends Model
 {
     use HasFactory;
@@ -19,6 +29,7 @@ final class PlanFeature extends Model
         return ['limit_value' => 'integer'];
     }
 
+    /** @return BelongsTo<Plan, $this> */
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

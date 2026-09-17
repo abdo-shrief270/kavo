@@ -6,10 +6,23 @@ namespace App\Modules\Platform\Webhooks\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Inbound provider event. Not tenant-scoped: the tenant is only known after
  * the payload is parsed, which happens in the queued job.
+ *
+ * @property int $id
+ * @property string $provider
+ * @property string $external_event_id
+ * @property ?string $event_type
+ * @property array $payload
+ * @property bool $signature_valid
+ * @property Carbon $received_at
+ * @property ?Carbon $processed_at
+ * @property ?string $error
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 final class WebhookEvent extends Model
 {

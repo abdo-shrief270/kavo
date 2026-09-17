@@ -6,12 +6,25 @@ namespace App\Modules\Platform\Notifications\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * WhatsApp requires pre-approved templates for business-initiated messages
  * outside the 24-hour customer-service window. Modelling approval explicitly
  * means an unapproved send is refused here rather than silently dropped by
  * the provider.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $language
+ * @property string $body
+ * @property array $variables
+ * @property string $approval_status
+ * @property ?string $provider_template_id
+ * @property ?Carbon $approved_at
+ * @property ?string $rejection_reason
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 final class WhatsAppTemplate extends Model
 {
@@ -38,7 +51,7 @@ final class WhatsAppTemplate extends Model
     {
         $body = $this->body;
 
-        foreach ($this->variables ?? [] as $variable) {
+        foreach ($this->variables as $variable) {
             $body = str_replace('{{'.$variable.'}}', (string) ($values[$variable] ?? ''), $body);
         }
 

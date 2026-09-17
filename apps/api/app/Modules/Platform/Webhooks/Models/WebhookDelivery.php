@@ -8,11 +8,27 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Surfaced in the merchant dashboard with manual retry. Silently dropping a
  * delivery destroys trust in an integration platform, so failures stay
  * visible rather than disappearing into a log.
+ *
+ * @property int $id
+ * @property int $tenant_id
+ * @property int $webhook_subscription_id
+ * @property string $event_type
+ * @property array $payload
+ * @property int $attempt
+ * @property string $status
+ * @property ?int $status_code
+ * @property ?string $response_body
+ * @property ?Carbon $delivered_at
+ * @property ?Carbon $failed_at
+ * @property ?Carbon $next_attempt_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 final class WebhookDelivery extends Model
 {
@@ -31,6 +47,7 @@ final class WebhookDelivery extends Model
         ];
     }
 
+    /** @return BelongsTo<WebhookSubscription, $this> */
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(WebhookSubscription::class, 'webhook_subscription_id');

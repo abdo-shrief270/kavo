@@ -37,8 +37,8 @@ final class ErrorContext
             // anything you would want to filter an issue list by here.
             $scope->setTag('request_id', $requestId);
             $scope->setTag('tenant_id', (string) ($tenant?->getKey() ?? 'none'));
-            $scope->setTag('tenant_slug', $tenant?->slug ?? 'none');
-            $scope->setTag('product', $tenant?->product?->value ?? 'platform');
+            $scope->setTag('tenant_slug', $tenant->slug ?? 'none');
+            $scope->setTag('product', $tenant->product->value ?? 'platform');
             $scope->setTag('surface', $this->surfaceFor($request));
 
             if ($user !== null) {

@@ -160,7 +160,7 @@ final class SettlementRoutingTest extends TestCase
                 ->update(['public_reference' => $mine->public_reference]);
 
             $this->forgetTenant();
-            Log::spy();
+            $log = Log::spy();
 
             app(ApplyGatewaySettlement::class)->handle($this->settlement($mine->public_reference));
 
@@ -175,7 +175,7 @@ final class SettlementRoutingTest extends TestCase
 
             $this->assertSame(0, $owner->table('payment_events')->where('external_event_id', 'evt-settle-1001')->count());
 
-            Log::shouldHaveReceived('critical')
+            $log->shouldHaveReceived('critical')
                 ->withArgs(fn (string $message): bool => str_contains($message, 'Ambiguous settlement reference'))
                 ->once();
         } finally {

@@ -8,9 +8,23 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /** Stores a gateway token only. Raw card data never reaches this database. */
 #[Hidden(['gateway_token'])]
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $gateway
+ * @property string $gateway_token
+ * @property ?string $brand
+ * @property ?string $last_four
+ * @property ?int $expiry_month
+ * @property ?int $expiry_year
+ * @property bool $is_default
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class PaymentMethod extends Model
 {
     use BelongsToTenant;

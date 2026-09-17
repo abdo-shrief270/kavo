@@ -8,7 +8,20 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property int $plan_id
+ * @property string $status
+ * @property ?Carbon $trial_ends_at
+ * @property ?Carbon $current_period_start
+ * @property ?Carbon $current_period_end
+ * @property ?Carbon $canceled_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class Subscription extends Model
 {
     use BelongsToTenant;
@@ -26,6 +39,7 @@ final class Subscription extends Model
         ];
     }
 
+    /** @return BelongsTo<Plan, $this> */
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

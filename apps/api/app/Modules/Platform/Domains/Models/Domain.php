@@ -7,7 +7,21 @@ namespace App\Modules\Platform\Domains\Models;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $hostname
+ * @property string $status
+ * @property string $verification_token
+ * @property ?Carbon $verified_at
+ * @property ?Carbon $ssl_issued_at
+ * @property ?Carbon $ssl_expires_at
+ * @property ?string $last_error
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class Domain extends Model
 {
     use BelongsToTenant;

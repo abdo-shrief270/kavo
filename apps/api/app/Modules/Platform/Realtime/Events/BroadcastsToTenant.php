@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Platform\Realtime\Events;
 
-use App\Modules\Platform\Identity\Models\Tenant;
 use App\Modules\Platform\Realtime\Channels\ChannelRegistry;
 use Illuminate\Broadcasting\PrivateChannel;
 
@@ -18,11 +17,6 @@ use Illuminate\Broadcasting\PrivateChannel;
 abstract class BroadcastsToTenant
 {
     public function __construct(public readonly int $tenantId) {}
-
-    public static function for(Tenant $tenant, mixed ...$arguments): static
-    {
-        return new static($tenant->getKey(), ...$arguments);
-    }
 
     /** @return array<int, PrivateChannel> */
     public function broadcastOn(): array

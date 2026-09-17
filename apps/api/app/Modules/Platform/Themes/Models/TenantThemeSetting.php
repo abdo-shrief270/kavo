@@ -7,7 +7,18 @@ namespace App\Modules\Platform\Themes\Models;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $theme_code
+ * @property array $settings
+ * @property array $design_tokens
+ * @property bool $is_published
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class TenantThemeSetting extends Model
 {
     use BelongsToTenant;

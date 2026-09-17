@@ -13,10 +13,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * The tenant itself is not tenant-scoped — it is the thing being scoped to,
  * so it deliberately does not use the BelongsToTenant trait.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property TenantStatus $status
+ * @property Product $product
+ * @property ?int $plan_id
+ * @property ?Carbon $trial_ends_at
+ * @property array $settings
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ * @property ?Carbon $deleted_at
  */
 final class Tenant extends Model
 {
@@ -37,6 +50,7 @@ final class Tenant extends Model
         ];
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
@@ -44,6 +58,7 @@ final class Tenant extends Model
             ->withTimestamps();
     }
 
+    /** @return HasMany<Domain, $this> */
     public function domains(): HasMany
     {
         return $this->hasMany(Domain::class);

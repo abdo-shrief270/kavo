@@ -263,7 +263,7 @@ final class PlatformServiceProvider extends ServiceProvider
                 'time_ms' => $query->time,
                 'connection' => $query->connectionName,
                 'tenant_id' => app(TenantContext::class)->id(),
-                'route' => request()?->route()?->getName() ?? request()?->path(),
+                'route' => request()->route()?->getName() ?? request()->path(),
             ]);
         });
     }

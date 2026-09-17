@@ -7,6 +7,7 @@ namespace App\Modules\Platform\Observability\Logging;
 use Illuminate\Log\Logger;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\FormattableHandlerInterface;
+use Monolog\Logger as Monolog;
 
 /**
  * Applies JSON output and the context processor to a channel.
@@ -26,6 +27,13 @@ final class JsonLogFormatter
     public function __invoke(Logger $logger): void
     {
         $monolog = $logger->getLogger();
+
+        // Only Monolog carries processors and handlers. A channel backed by
+        // something else is left alone rather than fatally erroring inside a
+        // logger, which is the worst place to throw.
+        if (! $monolog instanceof Monolog) {
+            return;
+        }
 
         $monolog->pushProcessor(new ContextProcessor);
 

@@ -11,7 +11,29 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $reference
+ * @property string $gateway
+ * @property PaymentRail $rail
+ * @property PaymentStatus $status
+ * @property int $amount_cents
+ * @property string $currency
+ * @property ?string $gateway_reference
+ * @property ?string $payment_reference
+ * @property ?string $redirect_url
+ * @property ?Carbon $expires_at
+ * @property ?Carbon $settled_at
+ * @property int $refunded_cents
+ * @property ?string $last_error
+ * @property array $metadata
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ * @property ?string $public_reference
+ */
 final class PaymentIntent extends Model
 {
     use BelongsToTenant;
@@ -36,6 +58,7 @@ final class PaymentIntent extends Model
         ];
     }
 
+    /** @return HasMany<PaymentEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(PaymentEvent::class);

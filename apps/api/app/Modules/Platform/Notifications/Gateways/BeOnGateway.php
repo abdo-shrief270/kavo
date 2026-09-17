@@ -8,7 +8,6 @@ use App\Modules\Platform\Notifications\Models\WhatsAppTemplate;
 use App\Modules\Platform\Notifications\Results\WhatsAppSendResult;
 use App\Shared\Contracts\WhatsAppGateway;
 use Illuminate\Http\Client\Factory as Http;
-use Illuminate\Http\Client\RequestException;
 
 final readonly class BeOnGateway implements WhatsAppGateway
 {
@@ -77,7 +76,7 @@ final readonly class BeOnGateway implements WhatsAppGateway
                 ->acceptJson()
                 ->timeout(10)
                 ->post(rtrim($this->baseUrl, '/').$path, $payload);
-        } catch (RequestException|\Throwable $e) {
+        } catch (\Throwable $e) {
             return WhatsAppSendResult::failed($e->getMessage());
         }
 

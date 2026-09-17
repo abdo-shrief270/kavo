@@ -8,8 +8,23 @@ use App\Shared\Enums\Product;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /** Platform catalogue, shared across tenants — deliberately not tenant-scoped. */
+/**
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property Product $product
+ * @property string $interval
+ * @property int $price_cents
+ * @property string $currency
+ * @property int $trial_days
+ * @property bool $is_active
+ * @property int $sort_order
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class Plan extends Model
 {
     use HasFactory;
@@ -24,6 +39,7 @@ final class Plan extends Model
         ];
     }
 
+    /** @return HasMany<PlanFeature, $this> */
     public function features(): HasMany
     {
         return $this->hasMany(PlanFeature::class);

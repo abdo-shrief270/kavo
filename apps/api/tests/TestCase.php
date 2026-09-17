@@ -36,7 +36,7 @@ abstract class TestCase extends BaseTestCase
      * bypass RLS, so if the suite could migrate as kavo_app the tests would
      * be running with privileges the real application never has.
      *
-     * @return array<string, string>
+     * @return array<string, string|bool>
      */
     protected function migrateFreshUsing()
     {

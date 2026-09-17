@@ -10,7 +10,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property ?int $tenant_id
+ * @property ?int $user_id
+ * @property string $action
+ * @property ?array $old_values
+ * @property ?array $new_values
+ * @property ?string $ip
+ * @property ?string $user_agent
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class AuditLog extends Model
 {
     use BelongsToTenant;
@@ -28,6 +41,7 @@ final class AuditLog extends Model
         return $this->morphTo();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

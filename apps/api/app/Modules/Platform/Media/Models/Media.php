@@ -8,8 +8,22 @@ use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $disk
+ * @property string $path
+ * @property string $filename
+ * @property string $mime
+ * @property int $size_bytes
+ * @property ?string $checksum
+ * @property array $meta
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class Media extends Model
 {
     use BelongsToTenant;

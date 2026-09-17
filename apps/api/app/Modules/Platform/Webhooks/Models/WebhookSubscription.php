@@ -9,8 +9,21 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 #[Hidden(['secret'])]
+/**
+ * @property int $id
+ * @property int $tenant_id
+ * @property string $url
+ * @property string $secret
+ * @property array $event_types
+ * @property bool $is_active
+ * @property int $consecutive_failures
+ * @property ?Carbon $disabled_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 final class WebhookSubscription extends Model
 {
     use BelongsToTenant;
@@ -23,6 +36,7 @@ final class WebhookSubscription extends Model
         return ['event_types' => 'array', 'is_active' => 'boolean', 'disabled_at' => 'datetime'];
     }
 
+    /** @return HasMany<WebhookDelivery, $this> */
     public function deliveries(): HasMany
     {
         return $this->hasMany(WebhookDelivery::class);

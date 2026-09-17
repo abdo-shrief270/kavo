@@ -16,7 +16,7 @@ final class TenantThemeSettingFactory extends Factory
     {
         return [
             'theme_code' => 'default',
-            'settings' => ['hero' => ['headline' => fake()->catchPhrase()]],
+            'settings' => ['hero' => ['headline' => fake()->sentence(3)]],
             'design_tokens' => ['color' => ['primary' => '#111827']],
             'is_published' => true,
         ];
