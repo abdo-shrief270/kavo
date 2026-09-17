@@ -812,6 +812,68 @@ still `hostnameIsIssuable`.
 old raw-body shape being rejected, and `OutboundWebhookDeliveryTest` covers
 the SSRF cases down to the pinned resolve entry.
 
+### A12. CI had never run, and everything it was meant to catch
+
+The checklist line "CI green on every PR — unverified" was generous. CI had
+never run once, on any commit, and the first time it did it failed eleven
+times in a row on things that had been wrong for as long as they had existed.
+
+**Why it never ran.** Every workflow was gated on `push: [main, develop]` plus
+`pull_request`. This repository has one branch and no pull request. Meanwhile
+the only workflow producing runs was deploy-production, failing instantly with
+zero jobs on every push — `if: ${{ secrets.X != '' }}` uses a context GitHub
+does not offer a step's `if`, which is a parse error, not a false condition.
+That is also why a workflow restricted to `main` was firing on a feature
+branch: an unparseable workflow is reported against whatever was pushed.
+
+**What turning it on found**, in the order CI found it:
+
+- The storefront had no root `tsconfig.json`, so `nuxt typecheck` could not
+  start and `pnpm -r typecheck` had never typechecked anything. With it
+  running: `robots: false` route rules on /account and /checkout belong to
+  `@nuxtjs/robots`, which is not a dependency, so the pages meant to be kept
+  out of search results were indexable.
+- `pnpm/action-setup` refuses to run when a version is named both in the
+  action and in `packageManager`. The whole frontend job died at setup.
+- **PHPStan: 58 errors.** Mostly one defect wearing twenty hats — no model
+  carried `@property` annotations and no relation carried generics, so every
+  enum cast looked like a string and every relation like a bare Model. Eight
+  were real: a `new static()` on an abstract class whose subclasses extend the
+  constructor, a dead `catch` for an exception never thrown, a coalesce on a
+  NOT NULL column, `pushProcessor()` on something only documented as a PSR
+  logger, `?->` on the left of `??` twice, a Faker method that lives in the
+  en_US locale rather than the base generator, and a docblock that promised
+  strings while returning booleans.
+- **Deptrac** was failing on `--fail-on-uncovered` counting 467 *framework*
+  classes, while reporting zero violations — nine runs chasing a problem that
+  did not exist. Underneath it, once readable: the Observability module had
+  never been registered as a layer, Media and Notifications were missing the
+  Audit and Realtime entries they had always needed, and Billing's settlement
+  listener took Webhooks' Eloquent model.
+- Fixing that last one properly — a shared `InboundWebhookReceived` event —
+  meant writing the end-to-end test, which found that **no Paymob callback
+  could ever have settled a payment**. The job named its event
+  `webhook.{provider}.{type}` and the listener was registered against a
+  hardcoded matrix of guessed type strings containing `transaction`. Paymob
+  sends `TRANSACTION`. Event names are case-sensitive. Accepted, marked
+  processed, acted on by nobody.
+- `phpunit.xml` declared a `tests/Unit` suite over a directory that has been
+  empty since the Laravel installer made it. Git does not track empty
+  directories, so the suite ran everywhere except a clean checkout.
+
+**What this says about the rest.** Every one of these had been true for many
+commits and none was visible from inside the repository. The pattern across
+this phase is consistent: the things that break are the ones nothing exercises,
+and they break silently. Two boundary checks now live in the ordinary test
+suite — every module has a layer, and no layer imports what its ruleset
+forbids — specifically so the rules survive an environment where deptrac
+cannot be installed, which is how they went unchecked in the first place.
+
+One thing is deferred rather than fixed: `qossmic/deptrac` is abandoned in
+favour of `deptrac/deptrac`. Switching needs a composer update against
+github.com, which this environment cannot reach. `composer audit` reports it
+instead of failing on it; advisories still fail.
+
 ---
 
 ## Phase 0 status
@@ -821,7 +883,7 @@ checklist stands as follows.
 
 | Exit criterion | State |
 |---|---|
-| CI green on every PR | Workflows written; **unverified — CI has never run** |
+| CI green on every PR | ✅ Running and green: lint, PHPStan, Deptrac, 190 tests, isolation, three frontend builds |
 | Zero-downtime deploy, both environments | Logic rehearsed and in CI; not run on a VPS |
 | Rollback tested | ✅ Exercised, including the post-swap path |
 | Tenant isolation suite, one test per model | ✅ Generated; has caught two models pre-review |

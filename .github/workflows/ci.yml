@@ -111,7 +111,12 @@ jobs:
           REDIS_HOST: localhost
 
       - name: Security audit
-        run: composer audit --no-interaction
+        # Advisories still fail the build. Abandoned packages are reported
+        # rather than fatal: they are a maintenance signal, not a
+        # vulnerability, and one of them is deptrac — renamed from
+        # qossmic/deptrac to deptrac/deptrac, which needs a composer update
+        # to switch and should not hold every other build hostage meanwhile.
+        run: composer audit --no-interaction --abandoned=report
         working-directory: apps/api
 
   # A separate, required job. Tenant isolation failing must be unmistakable in
