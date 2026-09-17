@@ -24,22 +24,54 @@ final class ArchitectureTest extends BaseTestCase
     /**
      * Read with regexes rather than a YAML parser: no parser ships with the
      * app, and adding a dependency to read one config file we own ourselves
-     * is a worse trade than two patterns.
+     * is a worse trade than a few patterns.
      *
-     * @return array{layers: list<string>, ruleset: list<string>}
+     * @return array{layers: array<string, string>, ruleset: array<string, list<string>>}
      */
     private function config(): array
     {
         $yaml = (string) file_get_contents(dirname(__DIR__, 2).'/deptrac.yaml');
 
-        preg_match_all('/^    - name: (\w+)$/m', $yaml, $layers);
+        // Line-based rather than one clever pattern: the file is small and
+        // predictable, and a regex spanning blocks is the kind of thing that
+        // silently matches nothing.
+        $layers = [];
+        $current = null;
 
-        // Ruleset keys are the only four-space-indented `Name:` lines that
-        // follow the `ruleset:` heading.
-        $ruleset = substr($yaml, (int) strpos($yaml, "\n  ruleset:"));
-        preg_match_all('/^    (\w+):/m', $ruleset, $rules);
+        foreach (explode("\n", $yaml) as $line) {
+            if (preg_match('/^    - name: (\w+)$/', $line, $m)) {
+                $current = $m[1];
+            } elseif ($current !== null && preg_match('/^          value: (\S+)$/', $line, $m)) {
+                $layers[$current] = $m[1];
+                $current = null;
+            }
+        }
 
-        return ['layers' => $layers[1], 'ruleset' => $rules[1]];
+        $ruleset = [];
+        $section = substr($yaml, (int) strpos($yaml, "\n  ruleset:"));
+
+        foreach (preg_split('/^    (?=\w)/m', $section) as $block) {
+            if (! preg_match('/^(\w+):/', $block, $name)) {
+                continue;
+            }
+
+            preg_match_all('/^      - (\w+)$/m', $block, $allowed);
+            $ruleset[$name[1]] = $allowed[1];
+        }
+
+        return ['layers' => $layers, 'ruleset' => $ruleset];
+    }
+
+    /** The layer a file belongs to, or null when nothing claims it. */
+    private function layerOf(string $path, array $layers): ?string
+    {
+        foreach ($layers as $name => $pattern) {
+            if (str_starts_with($path, rtrim($pattern, '.*'))) {
+                return $name;
+            }
+        }
+
+        return null;
     }
 
     #[Test]
@@ -51,7 +83,7 @@ final class ArchitectureTest extends BaseTestCase
         $this->assertNotEmpty($modules, 'No modules found — the path this test walks has moved.');
 
         foreach ($modules as $module) {
-            $this->assertContains(
+            $this->assertArrayHasKey(
                 $module,
                 $config['layers'],
                 "The {$module} module has no Deptrac layer. Uncovered classes fail the whole analysis, so this is not a module without rules — it is a broken gate.",
@@ -64,8 +96,8 @@ final class ArchitectureTest extends BaseTestCase
     {
         $config = $this->config();
 
-        foreach ($config['layers'] as $layer) {
-            $this->assertContains(
+        foreach (array_keys($config['layers']) as $layer) {
+            $this->assertArrayHasKey(
                 $layer,
                 $config['ruleset'],
                 "The {$layer} layer has no ruleset entry, so every dependency it has is a violation.",
@@ -146,5 +178,102 @@ final class ArchitectureTest extends BaseTestCase
         }
 
         return $files;
+    }
+
+    /**
+     * Deptrac's own check, run here so it holds without Deptrac.
+     *
+     * The tool will not install everywhere — composer cannot always reach
+     * github.com — and it took until the first CI run for anyone to discover
+     * that the gate had been failing on framework classes rather than on
+     * anything in this repository. A rule that only exists in a tool nobody
+     * can run is a rule that is not being applied.
+     *
+     * This looks only at app code, which is the part the ruleset is about.
+     */
+    #[Test]
+    public function no_layer_depends_on_one_its_ruleset_does_not_allow(): void
+    {
+        $config = $this->config();
+        $owners = $this->classesByLayer($config['layers']);
+        $violations = [];
+
+        foreach ($this->phpFilesIn(dirname(__DIR__, 2).'/app') as $file) {
+            $from = $this->layerOf($this->relative($file), $config['layers']);
+
+            if ($from === null) {
+                continue;
+            }
+
+            preg_match_all('/^use (App\\\\[\w\\\\]+)(?: as \w+)?;$/m', (string) file_get_contents($file), $imports);
+
+            foreach ($imports[1] as $imported) {
+                $to = $owners[$imported] ?? null;
+
+                if ($to === null || $to === $from || in_array($to, $config['ruleset'][$from] ?? [], true)) {
+                    continue;
+                }
+
+                $violations[] = $from.' → '.$to.': '.basename($file).' uses '.$imported;
+            }
+        }
+
+        sort($violations);
+
+        $this->assertSame([], $violations, "Module boundaries broken:\n".implode("\n", $violations));
+    }
+
+    #[Test]
+    public function every_class_under_app_belongs_to_a_layer(): void
+    {
+        $config = $this->config();
+        $unclaimed = [];
+
+        foreach ($this->phpFilesIn(dirname(__DIR__, 2).'/app') as $file) {
+            if ($this->layerOf($this->relative($file), $config['layers']) === null) {
+                $unclaimed[] = $this->relative($file);
+            }
+        }
+
+        // Deptrac's --fail-on-uncovered cannot express this: it counts every
+        // framework class the app touches as uncovered too, so it can never
+        // pass. This is the part that was actually meant.
+        $this->assertSame([], $unclaimed, "Not covered by any Deptrac layer:\n".implode("\n", $unclaimed));
+    }
+
+    /**
+     * Fully-qualified name → layer, for every class the app defines.
+     *
+     * @param  array<string, string>  $layers
+     * @return array<string, string>
+     */
+    private function classesByLayer(array $layers): array
+    {
+        $owners = [];
+
+        foreach ($this->phpFilesIn(dirname(__DIR__, 2).'/app') as $file) {
+            $source = (string) file_get_contents($file);
+
+            if (! preg_match('/^namespace ([\w\\\\]+);/m', $source, $namespace)) {
+                continue;
+            }
+
+            if (! preg_match('/^(?:final |abstract |readonly )*(?:class|interface|trait|enum) (\w+)/m', $source, $class)) {
+                continue;
+            }
+
+            $layer = $this->layerOf($this->relative($file), $layers);
+
+            if ($layer !== null) {
+                $owners[$namespace[1].'\\'.$class[1]] = $layer;
+            }
+        }
+
+        return $owners;
+    }
+
+    private function relative(string $path): string
+    {
+        return ltrim(str_replace(dirname(__DIR__, 2), '', $path), '/');
     }
 }

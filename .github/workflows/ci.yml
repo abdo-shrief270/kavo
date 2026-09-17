@@ -93,12 +93,14 @@ jobs:
       # discipline decays exactly when delivery pressure is highest, which is
       # when a boundary violation is most likely and most costly.
       - name: Module boundaries (Deptrac)
-        # --formatter=table and --report-uncovered on purpose. Deptrac's CI
-        # formatter emits annotations for violations and says nothing at all
-        # about uncovered classes, so the step was exiting 1 having printed
-        # nothing — a gate whose failure you cannot read is a gate you end up
-        # disabling.
-        run: php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered --formatter=table
+        # --formatter=table because the CI formatter annotates violations and
+        # says nothing about anything else, so a failing step printed nothing
+        # at all. No --fail-on-uncovered because Deptrac counts every framework
+        # class the app touches as uncovered — 467 of them — so the flag could
+        # never pass: it failed the step while reporting zero violations. What
+        # it was reaching for, that nothing under app/ is unlayered, is
+        # asserted by ArchitectureTest, which can also name what is missing.
+        run: php vendor/bin/deptrac analyse --no-progress --formatter=table
         working-directory: apps/api
 
       - name: Tests
