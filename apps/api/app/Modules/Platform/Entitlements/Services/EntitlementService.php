@@ -141,7 +141,7 @@ final class EntitlementService implements Entitlements
                     ->latest('id')
                     ->first();
 
-                $planId = $subscription?->plan_id ?? $tenant->plan_id;
+                $planId = $subscription->plan_id ?? $tenant->plan_id;
 
                 if ($planId === null) {
                     return [];

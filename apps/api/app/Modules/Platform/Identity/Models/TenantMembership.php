@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Platform\Identity\Models;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Carbon;
 
 /**
@@ -19,9 +19,12 @@ use Illuminate\Support\Carbon;
  * @property ?Carbon $created_at
  * @property ?Carbon $updated_at
  */
-final class TenantMembership extends Model
+final class TenantMembership extends Pivot
 {
     protected $table = 'tenant_user';
+
+    // tenant_user has its own id, which Pivot does not assume.
+    public $incrementing = true;
 
     protected $fillable = ['tenant_id', 'user_id', 'role', 'invited_at', 'joined_at'];
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Modules\Platform\Identity\Models\Tenant;
+use App\Modules\Platform\Identity\Models\TenantMembership;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -54,10 +55,11 @@ class User extends Authenticatable
         ];
     }
 
-    /** @return BelongsToMany<Tenant, $this> */
+    /** @return BelongsToMany<Tenant, $this, TenantMembership> */
     public function tenants(): BelongsToMany
     {
         return $this->belongsToMany(Tenant::class)
+            ->using(TenantMembership::class)
             ->withPivot(['role', 'invited_at', 'joined_at'])
             ->withTimestamps();
     }
