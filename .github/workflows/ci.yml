@@ -172,9 +172,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` here on purpose. package.json's `packageManager` field
+      # is the single source of truth, and naming a version in both is not a
+      # tie-break — the action refuses to run at all.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
