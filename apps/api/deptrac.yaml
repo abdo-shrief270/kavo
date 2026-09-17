@@ -89,6 +89,25 @@ deptrac:
         - type: directory
           value: app/Modules/Platform/Audit/.*
 
+  # Shared is meant to be the bottom of the stack, and it is — except that its
+  # whole subject is tenancy, and a tenancy primitive deals in tenants. The
+  # Tenant model lives in Identity because that is where it belongs, so four
+  # things in Shared name it: the context that holds one, the trait that scopes
+  # a model to one, the entitlements contract, and the quota event.
+  #
+  # Listed one by one rather than opening Shared to Identity wholesale. These
+  # four are the design; a fifth would be drift, and naming them individually
+  # is what keeps CI able to tell the difference.
+  skip_violations:
+    App\Shared\Tenancy\TenantContext:
+      - App\Modules\Platform\Identity\Models\Tenant
+    App\Shared\Tenancy\BelongsToTenant:
+      - App\Modules\Platform\Identity\Models\Tenant
+    App\Shared\Contracts\Entitlements:
+      - App\Modules\Platform\Identity\Models\Tenant
+    App\Shared\Events\QuotaThresholdReached:
+      - App\Modules\Platform\Identity\Models\Tenant
+
   ruleset:
     # Everything may use the shared contracts, enums and tenancy primitives.
     # That is what Shared is for.
