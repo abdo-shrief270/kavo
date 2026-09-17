@@ -61,8 +61,12 @@ jobs:
           sudo chown -R postgres:postgres /var/backups/kavo
 
           sudo tee -a /etc/postgresql/16/main/postgresql.conf < deploy/backup/postgresql-archiving.conf > /dev/null
-          echo "host all all 127.0.0.1/32 trust"        | sudo tee -a /etc/postgresql/16/main/pg_hba.conf > /dev/null
-          echo "host replication all 127.0.0.1/32 trust" | sudo tee -a /etc/postgresql/16/main/pg_hba.conf > /dev/null
+          # Prepended, not appended. pg_hba.conf is first-match-wins and
+          # Debian ships a scram-sha-256 line for 127.0.0.1, so trust rules
+          # added at the end never match — pg_basebackup asks for a password
+          # nobody can supply and the drill fails at the first step.
+          sudo sed -i '1i host replication all 127.0.0.1/32 trust' /etc/postgresql/16/main/pg_hba.conf
+          sudo sed -i '1i host all all 127.0.0.1/32 trust' /etc/postgresql/16/main/pg_hba.conf
           sudo pg_ctlcluster 16 main restart
           sleep 5
 
