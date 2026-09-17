@@ -93,7 +93,12 @@ jobs:
       # discipline decays exactly when delivery pressure is highest, which is
       # when a boundary violation is most likely and most costly.
       - name: Module boundaries (Deptrac)
-        run: php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered
+        # --formatter=table and --report-uncovered on purpose. Deptrac's CI
+        # formatter emits annotations for violations and says nothing at all
+        # about uncovered classes, so the step was exiting 1 having printed
+        # nothing — a gate whose failure you cannot read is a gate you end up
+        # disabling.
+        run: php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered --formatter=table
         working-directory: apps/api
 
       - name: Tests
