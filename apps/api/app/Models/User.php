@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -62,6 +63,18 @@ class User extends Authenticatable
             ->using(TenantMembership::class)
             ->withPivot(['role', 'invited_at', 'joined_at'])
             ->withTimestamps();
+    }
+
+    /**
+     * The same rows as tenants(), read as memberships rather than through the
+     * pivot accessor — so the role is a typed property of a model rather than
+     * a magic attribute on the tenant it happens to be attached to.
+     *
+     * @return HasMany<TenantMembership, $this>
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(TenantMembership::class);
     }
 
     public function belongsToTenant(Tenant $tenant): bool

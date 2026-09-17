@@ -42,6 +42,48 @@ final class AuthAndProvisioningTest extends TestCase
         $this->assertSame('sanctum', config('auth.guards.sanctum.driver'));
     }
 
+    /**
+     * The dashboard's workspace switcher is built from this, and the role it
+     * shows decides which controls it renders. It was never asserted.
+     */
+    #[Test]
+    public function me_lists_the_workspaces_a_user_belongs_to_with_their_role(): void
+    {
+        $tenant = Tenant::factory()->create(['name' => 'Ada Atelier']);
+        $other = Tenant::factory()->create();
+        $user = User::factory()->create();
+
+        $tenant->users()->attach($user, ['role' => 'owner', 'joined_at' => now()]);
+
+        $response = $this->actingAs($user)->getJson('/api/me')->assertOk();
+
+        // Exactly one: a workspace the user has no membership in is not theirs
+        // to see, however it was created.
+        $response->assertJsonCount(1, 'user.tenants')
+            ->assertJsonPath('user.tenants.0.slug', $tenant->slug)
+            ->assertJsonPath('user.tenants.0.name', 'Ada Atelier')
+            ->assertJsonPath('user.tenants.0.product', $tenant->product->value)
+            ->assertJsonPath('user.tenants.0.role', 'owner');
+
+        $this->assertNotContains($other->slug, array_column($response->json('user.tenants'), 'slug'));
+    }
+
+    /**
+     * A soft-deleted workspace leaves its memberships behind. Listing one
+     * would put a workspace in the switcher that cannot be opened.
+     */
+    #[Test]
+    public function me_omits_a_workspace_that_has_been_deleted(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create();
+        $tenant->users()->attach($user, ['role' => 'owner', 'joined_at' => now()]);
+
+        $tenant->delete();
+
+        $this->actingAs($user)->getJson('/api/me')->assertOk()->assertJsonCount(0, 'user.tenants');
+    }
+
     #[Test]
     public function signing_up_provisions_a_tenant_with_a_plan_and_a_subscription(): void
     {

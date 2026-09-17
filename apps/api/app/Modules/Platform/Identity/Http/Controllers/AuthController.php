@@ -6,6 +6,7 @@ namespace App\Modules\Platform\Identity\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Platform\Identity\Actions\ProvisionTenant;
+use App\Modules\Platform\Identity\Models\TenantMembership;
 use App\Shared\Enums\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -121,13 +122,17 @@ final class AuthController
             // frontends branch on this, and null is not false.
             'is_platform_admin' => (bool) $user->is_platform_admin,
             'active_tenant_id' => $user->active_tenant_id,
-            'tenants' => $user->tenants()->get()->map(fn ($t): array => [
-                'id' => $t->id,
-                'name' => $t->name,
-                'slug' => $t->slug,
-                'product' => $t->product->value,
-                'role' => $t->pivot->role,
-            ]),
+            // Read as memberships, not as tenants carrying a pivot: the role
+            // belongs to the membership, and whereHas keeps a membership to a
+            // soft-deleted tenant out rather than mapping over a null.
+            'tenants' => $user->memberships()->whereHas('tenant')->with('tenant')->get()
+                ->map(fn (TenantMembership $membership): array => [
+                    'id' => $membership->tenant->id,
+                    'name' => $membership->tenant->name,
+                    'slug' => $membership->tenant->slug,
+                    'product' => $membership->tenant->product->value,
+                    'role' => $membership->role,
+                ])->values(),
         ];
     }
 }
