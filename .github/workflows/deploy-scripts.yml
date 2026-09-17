@@ -2,10 +2,13 @@ name: Deploy scripts
 
 on:
   push:
-    branches: [main, develop]
     paths: ['deploy/**', '.github/workflows/deploy-scripts.yml']
   pull_request:
     paths: ['deploy/**', '.github/workflows/deploy-scripts.yml']
+
+concurrency:
+  group: deploy-scripts-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   rehearse:

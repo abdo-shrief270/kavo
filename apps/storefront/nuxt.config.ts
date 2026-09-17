@@ -56,8 +56,13 @@ export default defineNuxtConfig({
     // Personal and stateful. Caching these would serve one shopper's cart
     // to another.
     '/cart': { ssr: false },
-    '/account/**': { ssr: false, robots: false },
-    '/checkout/**': { ssr: false, robots: false },
+    // X-Robots-Tag rather than a `robots` route rule: that key belongs to
+    // @nuxtjs/robots, which is not installed, so it was silently ignored and
+    // these pages were indexable after all. The header needs no module and
+    // works on a client-rendered route, where a meta tag would depend on the
+    // crawler executing JavaScript.
+    '/account/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/checkout/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
   },
 
   nitro: {

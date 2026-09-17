@@ -1,12 +1,17 @@
 name: CI
 
+# Every branch, not just main and develop. Gating CI on branches that do not
+# exist yet is the same as having no CI: the suite, PHPStan and Deptrac had
+# never run here once, and the first thing a green tick has to be is a tick
+# that actually ran.
 on:
   push:
-    branches: [main, develop]
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # head_ref for pull_request, ref for push, so a branch with an open PR runs
+  # once rather than twice.
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
