@@ -72,4 +72,79 @@ final class ArchitectureTest extends BaseTestCase
             );
         }
     }
+
+    /**
+     * A ratchet on what Shared reaches into.
+     *
+     * Shared is meant to be the bottom of the stack and is not: its contracts
+     * are interfaces whose vocabulary lives inside the modules they abstract —
+     * PaymentGateway speaks in Billing's value objects, Entitlements in
+     * Entitlements', WhatsAppGateway in Notifications'. Arguably right (a
+     * contract and its DTOs belong together; only the interface is hoisted)
+     * and arguably the DTOs should move up beside the contracts. Either way it
+     * is a decision, not an accident, and deptrac.yaml can only say
+     * "Shared may reach those modules" — which would let the list grow.
+     *
+     * So the list is pinned here. Adding to it is a deliberate act with a
+     * failing test attached, which is what makes it a decision rather than
+     * drift.
+     */
+    #[Test]
+    public function shared_reaches_into_modules_only_where_it_already_does(): void
+    {
+        $allowed = [
+            // Tenancy is Shared's subject, and a tenancy primitive deals in
+            // tenants. Named by the context, the scoping trait, the
+            // entitlements contract and the quota event.
+            'App\Modules\Platform\Identity\Models\Tenant',
+
+            // The payment contract's own vocabulary.
+            'App\Modules\Platform\Billing\Payments\PaymentRail',
+            'App\Modules\Platform\Billing\Payments\PaymentRequest',
+            'App\Modules\Platform\Billing\Payments\PaymentResult',
+            'App\Modules\Platform\Billing\Payments\SettlementNotice',
+            // Carried by the PaymentSettled event that Commerce consumes.
+            'App\Modules\Platform\Billing\Models\PaymentIntent',
+
+            // The entitlements contract's result type, and the exception that
+            // reports one.
+            'App\Modules\Platform\Entitlements\Results\ConsumeResult',
+
+            'App\Modules\Platform\Notifications\Results\WhatsAppSendResult',
+        ];
+
+        $offenders = [];
+
+        foreach ($this->phpFilesIn(dirname(__DIR__, 2).'/app/Shared') as $file) {
+            preg_match_all('/^use (App\\\\Modules\\\\[\w\\\\]+);$/m', (string) file_get_contents($file), $matches);
+
+            foreach ($matches[1] as $imported) {
+                if (! in_array($imported, $allowed, true)) {
+                    $offenders[] = basename($file).' → '.$imported;
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $offenders,
+            'Shared reached into a module it does not already depend on. That is a layering decision, '
+            ."not a detail — make it deliberately by adding the class to this test's allowlist, or keep "
+            ."Shared out of it:\n".implode("\n", $offenders),
+        );
+    }
+
+    /** @return list<string> */
+    private function phpFilesIn(string $directory): array
+    {
+        $files = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory)) as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $files[] = $file->getPathname();
+            }
+        }
+
+        return $files;
+    }
 }

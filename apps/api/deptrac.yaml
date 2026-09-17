@@ -97,30 +97,33 @@ deptrac:
         - type: directory
           value: app/Modules/Platform/Observability/.*
 
-  # Shared is meant to be the bottom of the stack, and it is — except that its
-  # whole subject is tenancy, and a tenancy primitive deals in tenants. The
-  # Tenant model lives in Identity because that is where it belongs, so four
-  # things in Shared name it: the context that holds one, the trait that scopes
-  # a model to one, the entitlements contract, and the quota event.
-  #
-  # Listed one by one rather than opening Shared to Identity wholesale. These
-  # four are the design; a fifth would be drift, and naming them individually
-  # is what keeps CI able to tell the difference.
-  skip_violations:
-    App\Shared\Tenancy\TenantContext:
-      - App\Modules\Platform\Identity\Models\Tenant
-    App\Shared\Tenancy\BelongsToTenant:
-      - App\Modules\Platform\Identity\Models\Tenant
-    App\Shared\Contracts\Entitlements:
-      - App\Modules\Platform\Identity\Models\Tenant
-    App\Shared\Events\QuotaThresholdReached:
-      - App\Modules\Platform\Identity\Models\Tenant
-
   ruleset:
     # Everything may use the shared contracts, enums and tenancy primitives.
     # That is what Shared is for.
+    #
+    # Identity is here because Shared's subject is tenancy and a tenancy
+    # primitive deals in tenants: the context that holds one, the trait that
+    # scopes a model to one, the entitlements contract and the quota event all
+    # name the Tenant model, which lives in Identity. Moving Tenant into Shared
+    # would put an Eloquent model in the layer meant for contracts, and an
+    # interface would not survive BelongsToTenant, which needs the concrete
+    # class for belongsTo().
+    #
+    # And it is not only Identity: the payment contract speaks in Billing's
+    # value objects, the entitlements contract in Entitlements', the WhatsApp
+    # one in Notifications'. Only the interfaces were hoisted, not their
+    # vocabulary.
+    #
+    # This is coarser than the design — it permits Shared to reach anything in
+    # those four modules, where only eight named classes are intended. The
+    # precise list is pinned by ArchitectureTest, which can be run; this
+    # cannot say it without a config Deptrac 2 refuses to load.
     Shared:
       - Models
+      - Identity
+      - Billing
+      - Entitlements
+      - Notifications
     Support: ~
     Models:
       - Shared
