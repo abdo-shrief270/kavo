@@ -328,4 +328,48 @@ final class CatalogueTest extends TestCase
 
         return $plan;
     }
+
+    // ---------------------------------------------------- tenant resolution
+
+    /**
+     * The API never faces a browser directly: Caddy is in front of it and the
+     * storefront's SSR server calls it over the loopback, so the hostname the
+     * visitor asked for arrives only in X-Forwarded-Host. Without trusted
+     * proxies configured the API sees 127.0.0.1, resolves no tenant, and every
+     * storefront serves an empty shop — which is what it did.
+     */
+    #[Test]
+    public function a_forwarded_hostname_from_a_trusted_proxy_resolves_the_tenant(): void
+    {
+        Product::factory()->published()->create(['name' => 'Forwarded']);
+
+        $this->call(
+            'GET',
+            '/api/storefront/products',
+            server: [
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kavo.root_domain'),
+            ],
+        )->assertOk()->assertJsonPath('products.0.name', 'Forwarded');
+    }
+
+    /**
+     * And only from a proxy we put there. A client that can name its own
+     * hostname can name any tenant, and hostname is the whole of a
+     * storefront's identity.
+     */
+    #[Test]
+    public function a_forwarded_hostname_from_anywhere_else_is_ignored(): void
+    {
+        Product::factory()->published()->create();
+
+        $this->call(
+            'GET',
+            '/api/storefront/products',
+            server: [
+                'REMOTE_ADDR' => '203.0.113.9',
+                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kavo.root_domain'),
+            ],
+        )->assertStatus(404);
+    }
 }

@@ -15,6 +15,7 @@ export function useStorefront() {
 
     const { data } = await useFetch<StorefrontConfig>('/api/config', {
       key: 'storefront-config-fetch',
+      query: { host: useTenantHost() },
     })
 
     config.value = data.value ?? null

@@ -68,6 +68,62 @@ final class ObservabilityTest extends TestCase
         $this->assertNotSame('attacker-chosen-id', $response->headers->get('X-Request-Id'));
     }
 
+    /**
+     * Nor can one that merely arrives through the proxy.
+     *
+     * Caddy forwards a browser's headers unchanged, so "came through a trusted
+     * proxy" says nothing about who wrote them — which is the whole difference
+     * between a network hop being ours and a caller being ours.
+     */
+    #[Test]
+    public function arriving_through_a_trusted_proxy_is_not_proof_of_anything(): void
+    {
+        config()->set('kavo.internal_token', 'internal-secret');
+
+        $response = $this->call('GET', '/api/me', server: [
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_X_REQUEST_ID' => 'attacker-chosen-id',
+        ]);
+
+        $this->assertNotSame('attacker-chosen-id', $response->headers->get('X-Request-Id'));
+    }
+
+    /**
+     * The storefront's SSR server, which does prove it, keeps the trace.
+     *
+     * Without this a single page render produces two unrelated sets of logs,
+     * which is what it did: the check was isFromTrustedProxy() alone, no
+     * proxies were configured, and so an inbound id was never once accepted.
+     */
+    #[Test]
+    public function a_first_party_caller_keeps_the_trace_across_the_hop(): void
+    {
+        config()->set('kavo.internal_token', 'internal-secret');
+
+        $response = $this->call('GET', '/api/me', server: [
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_X_REQUEST_ID' => 'render-0f9a2c41',
+            'HTTP_X_INTERNAL_TOKEN' => 'internal-secret',
+        ]);
+
+        $this->assertSame('render-0f9a2c41', $response->headers->get('X-Request-Id'));
+    }
+
+    /** With no token configured nothing is first party, so nothing is taken on trust. */
+    #[Test]
+    public function an_unconfigured_token_trusts_no_one(): void
+    {
+        config()->set('kavo.internal_token', '');
+
+        $response = $this->call('GET', '/api/me', server: [
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_X_REQUEST_ID' => 'render-0f9a2c41',
+            'HTTP_X_INTERNAL_TOKEN' => '',
+        ]);
+
+        $this->assertNotSame('render-0f9a2c41', $response->headers->get('X-Request-Id'));
+    }
+
     #[Test]
     public function log_lines_carry_the_request_id(): void
     {

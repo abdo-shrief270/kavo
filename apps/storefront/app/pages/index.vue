@@ -18,5 +18,9 @@ useSeoMeta({
     <p v-else>
       No published theme yet. Publish one from the merchant dashboard.
     </p>
+
+    <p>
+      <NuxtLink to="/products">Browse the shop →</NuxtLink>
+    </p>
   </section>
 </template>

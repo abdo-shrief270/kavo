@@ -32,6 +32,8 @@ use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantDatabaseSession;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +47,8 @@ final class PlatformServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->trustTheProxiesInFront();
+
         // scoped, not singleton: under Octane the container outlives the
         // request, and a singleton here would leak one tenant into the next.
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
@@ -63,6 +67,32 @@ final class PlatformServiceProvider extends ServiceProvider
 
         $this->bindWhatsAppGateway();
         $this->bindPaymentGateways();
+    }
+
+    /**
+     * The API never faces a browser directly.
+     *
+     * Caddy terminates TLS in front of it, and the storefront's server calls
+     * it over the loopback during SSR. In both cases the hostname the visitor
+     * actually asked for survives only in X-Forwarded-Host — and a storefront
+     * tenant is identified by hostname, so without this every storefront
+     * request resolves no tenant and renders an empty shop.
+     *
+     * Set here rather than in bootstrap/app.php because the middleware
+     * closure there runs before configuration is loaded.
+     *
+     * Scoped to configured proxies and never '*': a client that can set its
+     * own X-Forwarded-Host can claim to be any tenant.
+     */
+    private function trustTheProxiesInFront(): void
+    {
+        TrustProxies::at(config('kavo.trusted_proxies', []));
+        TrustProxies::withHeaders(
+            HttpRequest::HEADER_X_FORWARDED_FOR
+            | HttpRequest::HEADER_X_FORWARDED_HOST
+            | HttpRequest::HEADER_X_FORWARDED_PORT
+            | HttpRequest::HEADER_X_FORWARDED_PROTO
+        );
     }
 
     /**

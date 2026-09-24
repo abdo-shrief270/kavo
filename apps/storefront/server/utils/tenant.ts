@@ -17,11 +17,22 @@ export interface StorefrontConfig {
  */
 export const getStorefrontConfig = defineCachedFunction(
   async (hostname: string, event: H3Event): Promise<StorefrontConfig> => {
-    const { apiBase } = useRuntimeConfig(event)
+    const { apiBase, internalToken } = useRuntimeConfig(event)
+    const requestId = String(event.context.requestId ?? '')
 
     return await $fetch<StorefrontConfig>('/api/storefront/config', {
       baseURL: apiBase,
-      headers: { Host: hostname },
+      // X-Forwarded-Host, not Host: Node's fetch treats Host as a forbidden
+      // header and drops it silently, so the API would see the loopback
+      // address and resolve no tenant at all. The API trusts this header only
+      // from its configured proxies.
+      headers: {
+        'X-Forwarded-Host': hostname,
+      // Identifies this call as the storefront's own and carries the render's
+      // correlation id, so the API's logs join up with this one's.
+        'X-Internal-Token': internalToken,
+        'X-Request-Id': requestId,
+      },
     })
   },
   {
@@ -33,8 +44,28 @@ export const getStorefrontConfig = defineCachedFunction(
   },
 )
 
-export function hostnameFrom(event: H3Event): string {
-  const host = getRequestHeader(event, 'x-forwarded-host') ?? getRequestHeader(event, 'host') ?? ''
+const LOOPBACK = ['', 'localhost', '127.0.0.1', '::1']
 
-  return host.split(':')[0]!.toLowerCase()
+/**
+ * Which tenant's shop this request is for.
+ *
+ * Normally the Host header, which is the tenant's public identity. But an SSR
+ * render calls these same routes in-process, and the visitor's Host does not
+ * survive that hop — the request arrives as localhost, having tried headers
+ * and Nuxt's own forwarding helpers, neither of which carried it reliably.
+ *
+ * So the caller may declare the host, and is believed only when the request
+ * looks internal. A browser cannot produce a request to this server with a
+ * loopback Host, so the override is unreachable from outside the box.
+ */
+export function hostnameFrom(event: H3Event, declared?: unknown): string {
+  const header = (getRequestHeader(event, 'x-forwarded-host') ?? getRequestHeader(event, 'host') ?? '')
+    .split(':')[0]!
+    .toLowerCase()
+
+  if (LOOPBACK.includes(header) && typeof declared === 'string' && declared) {
+    return declared.split(':')[0]!.toLowerCase()
+  }
+
+  return header
 }

@@ -3,7 +3,7 @@
  * needs to know the API's address or reach it directly.
  */
 export default defineEventHandler(async (event) => {
-  const hostname = hostnameFrom(event)
+  const hostname = hostnameFrom(event, getQuery(event).host)
 
   return await getStorefrontConfig(hostname, event)
 })

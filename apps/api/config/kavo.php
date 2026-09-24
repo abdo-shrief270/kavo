@@ -18,6 +18,33 @@ return [
      */
     'tls_ask_token' => env('KAVO_TLS_ASK_TOKEN'),
 
+    /*
+     | Shared secret the storefront's SSR server presents when it calls the
+     | API on a visitor's behalf.
+     |
+     | Being on the other side of a trusted proxy is not the same as being
+     | first-party: Caddy forwards a browser's headers unchanged, so "came
+     | through my proxy" says nothing about who wrote them. Anything the API
+     | takes on trust from a caller needs the caller to prove it is ours.
+     */
+    'internal_token' => env('KAVO_INTERNAL_TOKEN'),
+
+    /*
+     | Addresses whose X-Forwarded-* headers are believed.
+     |
+     | Caddy terminates TLS in front of the API, and the storefront calls the
+     | API over the loopback during SSR — in both cases the hostname the user
+     | actually asked for only survives in X-Forwarded-Host. Without this the
+     | API sees 127.0.0.1 and resolves no tenant at all, which is a storefront
+     | that renders nobody's shop.
+     |
+     | Deliberately not '*': trusting every client would let anyone claim any
+     | hostname, and hostname is how a storefront tenant is identified.
+     */
+    'trusted_proxies' => array_values(array_filter(
+        explode(',', (string) env('TRUSTED_PROXIES', '127.0.0.1,::1')),
+    )),
+
     'frontend' => [
         'dashboard' => env('FRONTEND_DASHBOARD_URL', 'http://localhost:5173'),
         'admin' => env('FRONTEND_ADMIN_URL', 'http://localhost:5174'),

@@ -25,6 +25,10 @@ export default defineNuxtConfig({
     // Server-side only. The storefront talks to the API over the internal
     // network during SSR, so this never reaches the browser.
     apiBase: process.env.NUXT_API_BASE || 'http://localhost:8000',
+    // Proves to the API that a call came from this server rather than from a
+    // browser whose headers a proxy forwarded. Server-side only, by
+    // definition: a secret in the browser bundle is not a secret.
+    internalToken: process.env.NUXT_INTERNAL_TOKEN || '',
     public: {
       // Used by the browser for client-side navigation and Echo.
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
