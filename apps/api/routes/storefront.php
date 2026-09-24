@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Commerce\Catalogue\Http\Controllers\Storefront\CatalogueController;
 use App\Modules\Platform\Themes\Http\Controllers\StorefrontConfigController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('tenant')->group(function (): void {
     Route::get('config', StorefrontConfigController::class)->name('config');
+
+    Route::get('products', [CatalogueController::class, 'index'])->name('products.index');
+    Route::get('products/{slug}', [CatalogueController::class, 'show'])->name('products.show');
 });

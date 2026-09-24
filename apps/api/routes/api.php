@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Commerce\Catalogue\Http\Controllers\ProductController;
 use App\Modules\Platform\Billing\Http\Controllers\PaymentController;
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
 use App\Modules\Platform\Identity\Http\Controllers\AuthController;
@@ -60,6 +61,16 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
 
     Route::get('themes', [ThemeSettingsController::class, 'index'])->name('themes.index');
     Route::put('themes', [ThemeSettingsController::class, 'update'])->name('themes.update');
+
+    /*
+     | Catalogue. The first vertical surface: Platform modules stop here and
+     | Commerce begins.
+     */
+    Route::get('products', [ProductController::class, 'index'])->name('products.index');
+    Route::post('products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
+    Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
     Route::get('webhooks/subscriptions', [WebhookSubscriptionController::class, 'index'])->name('webhooks.index');
     Route::post('webhooks/subscriptions', [WebhookSubscriptionController::class, 'store'])->name('webhooks.store');

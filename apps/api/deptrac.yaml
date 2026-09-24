@@ -97,6 +97,14 @@ deptrac:
         - type: directory
           value: app/Modules/Platform/Observability/.*
 
+    # The first vertical. Everything under Modules/Commerce, whatever its
+    # submodule — the boundary that matters is Platform/Commerce, not the
+    # seams inside Commerce itself.
+    - name: Commerce
+      collectors:
+        - type: directory
+          value: app/Modules/Commerce/.*
+
   ruleset:
     # Everything may use the shared contracts, enums and tenancy primitives.
     # That is what Shared is for.
@@ -217,6 +225,22 @@ deptrac:
       - Models
       - Identity
 
+    # A vertical may use the platform it is built on. No Platform layer lists
+    # Commerce, and that asymmetry is the whole architecture: the platform has
+    # to serve four verticals without knowing anything about any of them.
+    Commerce:
+      - Shared
+      - Support
+      - Models
+      - Identity
+      - Billing
+      - Entitlements
+      - Media
+      - Notifications
+      - Audit
+      - Realtime
+      - Analytics
+
     Providers:
       - Shared
       - Support
@@ -233,6 +257,7 @@ deptrac:
       - Analytics
       - Audit
       - Observability
+      - Commerce
 
     Http:
       - Shared
