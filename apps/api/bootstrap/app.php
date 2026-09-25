@@ -9,6 +9,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -51,6 +52,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // else falls through to bearer-token auth. Registering it twice —
         // here and again via api(prepend:) — runs the session stack twice.
         $middleware->statefulApi();
+
+        /*
+         | Tenant resolution must happen before route-model binding.
+         |
+         | `tenant` is route middleware, so by default it runs *after* the api
+         | group — and SubstituteBindings lives in that group. Binding a
+         | tenant-scoped model therefore ran with no tenant resolved, the
+         | global scope refused the query as it is designed to, and every
+         | endpoint with a {model} parameter answered 500.
+         |
+         | Every one of them: products, orders, media, domains, payments,
+         | notifications and webhook subscriptions. The test suite could not
+         | see it because actingAsTenant() binds the context before the
+         | request, which is exactly the thing a real request does not do.
+         */
+        $middleware->prependToPriorityList(SubstituteBindings::class, ResolveTenant::class);
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,

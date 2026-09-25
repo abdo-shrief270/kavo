@@ -135,6 +135,61 @@ final class CatalogueTest extends TestCase
         $this->assertSame(0, Product::query()->count());
     }
 
+    /**
+     * SKUs are unique per shop, and reusing one is an ordinary merchant
+     * mistake — a copied row, a second colourway typed from memory. It used to
+     * be an unhandled Postgres constraint violation, which reaches the
+     * merchant as a 500 and their catalogue as nothing at all.
+     */
+    #[Test]
+    public function a_repeated_sku_is_a_validation_error_not_a_crash(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+
+        // The same SKU, on a different product.
+        $this->api('POST', '/api/products', $this->payload([
+            'name' => 'Poplin Shirt',
+            'variants' => [['sku' => 'LIN-S', 'options' => ['Size' => 'S'], 'price_cents' => 1000]],
+        ]))->assertStatus(422)->assertJsonValidationErrors('variants.0.sku');
+
+        $this->assertSame(1, Product::query()->count());
+    }
+
+    /** And two rows of one submission cannot share one either. */
+    #[Test]
+    public function two_variants_of_one_product_cannot_share_a_sku(): void
+    {
+        $this->api('POST', '/api/products', $this->payload([
+            'variants' => [
+                ['sku' => 'DUP', 'options' => ['Size' => 'S'], 'price_cents' => 1000],
+                ['sku' => 'DUP', 'options' => ['Size' => 'M'], 'price_cents' => 1000],
+            ],
+        ]))->assertStatus(422)->assertJsonValidationErrors('variants.1.sku');
+
+        $this->assertSame(0, Product::query()->count());
+    }
+
+    /**
+     * The refused write must not leave the allowance charged — the product it
+     * was charged for does not exist.
+     */
+    #[Test]
+    public function a_refused_sku_returns_the_product_allowance(): void
+    {
+        $this->capProductsAt(1);
+
+        $this->api('POST', '/api/products', $this->payload([
+            'variants' => [
+                ['sku' => 'DUP', 'options' => ['Size' => 'S'], 'price_cents' => 1000],
+                ['sku' => 'DUP', 'options' => ['Size' => 'M'], 'price_cents' => 1000],
+            ],
+        ]))->assertStatus(422);
+
+        // The slot was never used, so the one product they are entitled to is
+        // still available.
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+    }
+
     #[Test]
     public function editing_a_product_never_silently_rewrites_stock(): void
     {
@@ -268,6 +323,109 @@ final class CatalogueTest extends TestCase
 
         $this->storefront('/products/'.$product->slug)
             ->assertOk()->assertJsonCount(1, 'product.variants');
+    }
+
+    // ---------------------------------------------------------------- stock
+
+    /**
+     * The gap the merchant dashboard exposed. Stock could be set once, when a
+     * product was created, and never again — the variant sync refuses to
+     * touch it, correctly, so a shop that sold out could never restock.
+     */
+    #[Test]
+    public function a_merchant_receives_more_stock(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+        $variant = ProductVariant::query()->where('sku', 'LIN-S')->firstOrFail();
+
+        $this->api('PATCH', $this->stockUrl($variant), ['adjust' => 10, 'reason' => 'Received from supplier'])
+            ->assertOk()
+            ->assertJsonPath('variant.stock_on_hand', 15)
+            ->assertJsonPath('variant.available', 15);
+
+        // Where twelve went is answerable, or it is not.
+        $this->assertDatabaseHas('audit_logs', ['action' => 'variant.stock_adjusted']);
+    }
+
+    /** Shrinkage and breakage are stock movements too. */
+    #[Test]
+    public function a_negative_adjustment_is_allowed_down_to_what_is_promised(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+        $variant = ProductVariant::query()->where('sku', 'LIN-S')->firstOrFail();
+        $variant->update(['stock_reserved' => 3]);
+
+        $this->api('PATCH', $this->stockUrl($variant), ['adjust' => -2])
+            ->assertOk()
+            ->assertJsonPath('variant.stock_on_hand', 3);
+
+        // One more would leave two on the shelf against three already sold.
+        $this->api('PATCH', $this->stockUrl($variant), ['adjust' => -1])
+            ->assertStatus(422);
+
+        $this->assertSame(3, $variant->refresh()->stock_on_hand);
+    }
+
+    /**
+     * A stock take is an absolute figure, and the one that needs the guard:
+     * counting fewer than unpaid orders hold is a conversation with a
+     * customer, not a number to overwrite.
+     */
+    #[Test]
+    public function a_stock_take_cannot_count_below_what_unpaid_orders_hold(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+        $variant = ProductVariant::query()->where('sku', 'LIN-S')->firstOrFail();
+        $variant->update(['stock_reserved' => 4]);
+
+        $this->api('PATCH', $this->stockUrl($variant), ['on_hand' => 2])
+            ->assertStatus(422)
+            ->assertJsonPath('stock_reserved', 4);
+
+        $this->api('PATCH', $this->stockUrl($variant), ['on_hand' => 9])
+            ->assertOk()
+            ->assertJsonPath('variant.stock_on_hand', 9)
+            ->assertJsonPath('variant.available', 5);
+    }
+
+    #[Test]
+    public function a_stock_change_must_say_which_motion_it_is(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+        $variant = ProductVariant::query()->where('sku', 'LIN-S')->firstOrFail();
+
+        // Neither.
+        $this->api('PATCH', $this->stockUrl($variant), [])->assertStatus(422);
+
+        // Both — guessing which was meant is how stock ends up wrong.
+        $this->api('PATCH', $this->stockUrl($variant), ['adjust' => 5, 'on_hand' => 20])
+            ->assertStatus(422);
+
+        $this->assertSame(5, $variant->refresh()->stock_on_hand);
+    }
+
+    /**
+     * Route binding resolves the variant by id, and every variant in this
+     * tenant is visible to every other product of it — so row-level security
+     * cannot catch a variant addressed under the wrong product.
+     */
+    #[Test]
+    public function a_variant_cannot_be_restocked_through_another_products_url(): void
+    {
+        $this->api('POST', '/api/products', $this->payload())->assertStatus(201);
+
+        $other = Product::factory()->create();
+        $variant = ProductVariant::query()->where('sku', 'LIN-S')->firstOrFail();
+
+        $this->api('PATCH', '/api/products/'.$other->getKey().'/variants/'.$variant->getKey().'/stock', ['adjust' => 100])
+            ->assertStatus(404);
+
+        $this->assertSame(5, $variant->refresh()->stock_on_hand);
+    }
+
+    private function stockUrl(ProductVariant $variant): string
+    {
+        return '/api/products/'.$variant->product_id.'/variants/'.$variant->getKey().'/stock';
     }
 
     // ------------------------------------------------------------ integrity

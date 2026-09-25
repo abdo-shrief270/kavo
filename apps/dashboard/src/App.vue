@@ -31,6 +31,8 @@ async function signOut() {
 
       <nav>
         <RouterLink to="/">Overview</RouterLink>
+        <RouterLink to="/products">Products</RouterLink>
+        <RouterLink to="/orders">Orders</RouterLink>
         <RouterLink to="/media">Media</RouterLink>
         <RouterLink to="/domains">Domains</RouterLink>
         <RouterLink to="/webhooks">Webhooks</RouterLink>

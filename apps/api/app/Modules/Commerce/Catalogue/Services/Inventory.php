@@ -7,7 +7,7 @@ namespace App\Modules\Commerce\Catalogue\Services;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The three things that ever happen to stock, each as one atomic statement.
+ * Everything that ever happens to stock, each as one atomic statement.
  *
  * Every method here is a single conditional UPDATE rather than a read, a
  * decision in PHP and a write. That is not a performance choice. Two shoppers
@@ -85,6 +85,53 @@ final readonly class Inventory
                    AND (NOT track_inventory OR (stock_reserved >= ? AND stock_on_hand >= ?))
             SQL,
             [$quantity, $quantity, $variantId, $quantity, $quantity],
+        );
+    }
+
+    /**
+     * Goods arrived, or went missing. A signed delta, applied in place.
+     *
+     * A delta rather than a new total because that is what actually happens —
+     * a merchant receives ten more, they do not recount the shelf — and
+     * because a total computed in a form and submitted a minute later would
+     * silently undo whatever sold in between.
+     *
+     * @return bool false when the change would leave less on hand than unpaid
+     *              orders are already holding, in which case nothing changed
+     */
+    public function receive(int $variantId, int $delta): bool
+    {
+        return $this->apply(
+            <<<'SQL'
+                UPDATE product_variants
+                   SET stock_on_hand = stock_on_hand + ?,
+                       updated_at = now()
+                 WHERE id = ?
+                   AND stock_on_hand + ? >= stock_reserved
+            SQL,
+            [$delta, $variantId, $delta],
+        );
+    }
+
+    /**
+     * A stock take: this is what is actually on the shelf.
+     *
+     * Refused when the counted figure is below what unpaid orders hold, which
+     * is a real situation — the shelf is short and somebody has already been
+     * promised those units — but it is a conversation with a customer, not a
+     * number to overwrite. The CHECK constraint would refuse it anyway.
+     */
+    public function count(int $variantId, int $onHand): bool
+    {
+        return $this->apply(
+            <<<'SQL'
+                UPDATE product_variants
+                   SET stock_on_hand = ?,
+                       updated_at = now()
+                 WHERE id = ?
+                   AND ? >= stock_reserved
+            SQL,
+            [$onHand, $variantId, $onHand],
         );
     }
 

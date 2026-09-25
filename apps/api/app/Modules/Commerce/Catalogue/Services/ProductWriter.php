@@ -9,6 +9,7 @@ use App\Modules\Commerce\Catalogue\Models\ProductVariant;
 use App\Shared\Contracts\Entitlements;
 use App\Shared\Exceptions\QuotaExceeded;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -105,55 +106,92 @@ final readonly class ProductWriter
     /**
      * Replace the variant set, refusing any two that mean the same thing.
      *
-     * The database has a unique index on (product_id, option_signature), but
-     * catching it here turns a 500 into a validation error that names the
-     * offending combination.
+     * Two uniqueness rules apply and both are enforced by the database. What
+     * this method adds is a 422 naming the offending row instead of a 500
+     * naming a Postgres constraint — which is what a merchant reusing a SKU
+     * got, and reusing a SKU is an ordinary mistake rather than an exotic one.
      *
      * @param  list<array<string, mixed>>  $variants
      */
     private function syncVariants(Product $product, array $variants): void
     {
-        $seen = [];
+        $seenSignature = [];
+        $seenSku = [];
         $rows = [];
 
         foreach ($variants as $index => $variant) {
             $options = (array) ($variant['options'] ?? []);
             $signature = ProductVariant::signatureFor($options);
+            $sku = trim((string) ($variant['sku'] ?? ''));
 
-            if (isset($seen[$signature])) {
+            if (isset($seenSignature[$signature])) {
                 throw ValidationException::withMessages([
                     "variants.{$index}.options" => sprintf(
                         'This combination is already used by variant %d. Two variants with the same options split their stock between them.',
-                        $seen[$signature] + 1,
+                        $seenSignature[$signature] + 1,
                     ),
                 ]);
             }
 
-            $seen[$signature] = $index;
+            // Within this one submission. The cross-product case cannot be
+            // seen from here and is caught on the write below.
+            if (isset($seenSku[$sku])) {
+                throw ValidationException::withMessages([
+                    "variants.{$index}.sku" => sprintf('Variant %d already uses this SKU.', $seenSku[$sku] + 1),
+                ]);
+            }
+
+            $seenSignature[$signature] = $index;
+            $seenSku[$sku] = $index;
             $rows[] = [...$variant, 'options' => $options, 'option_signature' => $signature, 'position' => $variant['position'] ?? $index];
         }
 
         $keep = [];
 
-        foreach ($rows as $row) {
+        foreach ($rows as $index => $row) {
             $existing = $product->variants()
                 ->where('option_signature', $row['option_signature'])
                 ->first();
 
+            $keep[] = $this->writeVariant($product, $existing, $row, $index);
+        }
+
+        $product->variants()->whereNotIn('id', $keep ?: [0])->delete();
+    }
+
+    /**
+     * Write one variant, turning a SKU collision into a validation error.
+     *
+     * The collision is only visible at the write, because the SKU may belong
+     * to a different product of the same tenant — which nothing in the
+     * submitted payload can see.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function writeVariant(Product $product, ?ProductVariant $existing, array $row, int $index): int
+    {
+        try {
             if ($existing !== null) {
                 // Stock is deliberately not in the fillable set here: it is
                 // changed by receiving and by orders, never by editing the
                 // product form, which would silently overwrite a reservation.
                 $existing->fill(collect($row)->except(['stock_on_hand', 'stock_reserved'])->all())->save();
-                $keep[] = $existing->getKey();
 
-                continue;
+                return (int) $existing->getKey();
             }
 
-            $keep[] = $product->variants()->create($row)->getKey();
-        }
+            return (int) $product->variants()->create($row)->getKey();
+        } catch (QueryException $e) {
+            // 23505 on the SKU index: this code is already in use somewhere in
+            // this shop.
+            if ($e->getCode() === '23505' && str_contains((string) $e->getMessage(), 'sku')) {
+                throw ValidationException::withMessages([
+                    "variants.{$index}.sku" => sprintf('The SKU %s is already used by another product.', $row['sku'] ?? ''),
+                ]);
+            }
 
-        $product->variants()->whereNotIn('id', $keep ?: [0])->delete();
+            throw $e;
+        }
     }
 
     private function uniqueSlug(string $source, ?int $ignoreId = null): string

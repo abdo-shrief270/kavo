@@ -1173,3 +1173,64 @@ Two consequences worth naming, because they are the platform's now and were the
 merchant's under the other model: chargebacks land on the platform's acquirer
 relationship, and the platform is the party the acquirer knows. Neither changes
 the code; both change who answers the phone.
+
+### B11. The merchant dashboard, and four breaks only a browser could find
+
+A merchant could not add a product or see an order without curling the API.
+`apps/dashboard` now has a catalogue (list, editor with option axes, a
+generated variant matrix and stock controls) and an order book (list, detail,
+cancel), built against APIs that were already settled and tested.
+
+It typechecked. It built. CI was green. Then it was driven in a real browser —
+Chromium, a real API, a real login — and four things were wrong, three of them
+in code that predates this slice by weeks.
+
+**CORS sent `Access-Control-Allow-Origin: *` on credentialed requests.** No
+`config/cors.php` had ever been published, so the framework default applied:
+wildcard origin, `supports_credentials: false`. A browser refuses a
+credentialed response bearing a wildcard, so **every** call from either
+dashboard was blocked before it left the browser. Both SPAs had never once
+talked to the API from a browser. The wildcard was also the wrong answer rather
+than merely a broken one: allowing any origin to make credentialed requests
+would let any page on the internet act as a signed-in merchant. The origin list
+is now closed — the three configured frontends, plus storefront subdomains of
+the platform apex by pattern. Verified custom domains are deliberately not
+covered, because a regex cannot express "whatever is in the domains table".
+
+**Route-model binding ran before the tenant was resolved.** `tenant` is route
+middleware, so it runs *after* the `api` group — and `SubstituteBindings` lives
+in that group. Every binding query therefore ran with no tenant bound, the
+global scope refused it exactly as designed, and the merchant got a 500. Every
+endpoint with a `{model}` in its path: products, orders, payments, media,
+domains, webhook subscriptions. Fixed with
+`prependToPriorityList(SubstituteBindings::class, ResolveTenant::class)`.
+
+The reason no test caught it is worth more than the fix. Every suite calls
+`actingAsTenant()` in `setUp`, which binds the context *before* the request —
+and that is precisely what a real request does not do. `RouteBindingTest` now
+builds its fixtures as the tenant, tears the context down, and then makes the
+request from nothing. Removing the priority line fails all nine of its cases;
+the first draft of it passed six of them for the wrong reason, because a GET
+against a DELETE-only route is a 405 answered before any binding happens.
+
+**A duplicate SKU was an unhandled 500.** SKUs are unique per shop and reusing
+one is an ordinary mistake — a copied row, a second colourway typed from
+memory. It reached the merchant as a Postgres constraint name. Both cases are
+now 422s naming the row: within one submission, caught before the write; across
+products, caught at the write, because nothing in the payload can see a SKU
+that belongs to a different product.
+
+**Stock could be set once and never again.** The variant sync refuses to touch
+stock — correctly, since a form saved twenty minutes later would overwrite
+every sale made in between — which left no way to restock at all. A shop that
+sold out stayed sold out. `PATCH .../variants/{variant}/stock` adds the two
+motions a warehouse actually has: receiving, a signed delta that is safe under
+concurrency, and a stock take, an absolute figure refused when it counts fewer
+units than unpaid orders are already holding. Both are audited, because "where
+did those twelve go" is answerable or it is not.
+
+The run that proved it: signed in, listed the catalogue, created a product with
+two variants from a Size axis, restocked one from 4 to 14 through the new
+endpoint, listed both orders with their totals, opened one and saw the
+snapshot it froze at checkout, confirmed cancel is not offered on a paid order,
+and searched the order book by customer name — the query that used to 500.

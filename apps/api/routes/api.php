@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Commerce\Catalogue\Http\Controllers\ProductController;
+use App\Modules\Commerce\Catalogue\Http\Controllers\VariantStockController;
 use App\Modules\Commerce\Orders\Http\Controllers\OrderController;
 use App\Modules\Platform\Billing\Http\Controllers\PaymentController;
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
@@ -72,6 +73,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+    // The only way stock ever changes by hand. scopeBindings so a variant is
+    // resolved through its product rather than by id alone — both belong to
+    // the same tenant, so row-level security would not catch the mismatch.
+    Route::patch('products/{product}/variants/{variant}/stock', [VariantStockController::class, 'update'])
+        ->scopeBindings()
+        ->name('products.variants.stock');
 
     // The order book. Read-only plus a cancellation, which is the only write
     // that moves stock from this side; fulfilment is its own slice.
