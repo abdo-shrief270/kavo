@@ -21,8 +21,10 @@ use App\Modules\Platform\Notifications\Gateways\LogWhatsAppGateway;
 use App\Modules\Platform\Notifications\Listeners\SendQuotaThresholdAlert;
 use App\Modules\Platform\Observability\Console\SlowQueries;
 use App\Modules\Platform\Observability\Services\RequestContext;
+use App\Modules\Platform\Webhooks\Services\WebhookDispatcher;
 use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
+use App\Shared\Contracts\OutboundEvents;
 use App\Shared\Contracts\ResolvesHosts;
 use App\Shared\Contracts\WhatsAppGateway;
 use App\Shared\Events\InboundWebhookReceived;
@@ -60,6 +62,10 @@ final class PlatformServiceProvider extends ServiceProvider
 
         $this->app->singleton(Entitlements::class, EntitlementService::class);
         $this->app->singleton(AnalyticsIngestor::class, BufferedAnalyticsIngestor::class);
+
+        // How a vertical says something happened without knowing that the
+        // platform delivers it over HTTP with signatures and backoff.
+        $this->app->singleton(OutboundEvents::class, WebhookDispatcher::class);
 
         // Behind the container so tests can hand the destination guard
         // answers that public DNS will never give them.

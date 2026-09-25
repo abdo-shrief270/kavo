@@ -901,3 +901,153 @@ The honest summary: the platform's logic is built and tested, and what remains
 unproven is everything that needs credentials or a server — a first deploy, a
 real certificate, a live Sentry DSN, a real BeOn send, and an S3 bucket. Those
 are an afternoon with infrastructure, not more code.
+
+---
+
+## Amendment B — Phase 1 (Fashion / Commerce), decisions as built
+
+Phase 1 is the first vertical on top of the platform. Everything under
+`app/Modules/Commerce/` may use the platform; no Platform module lists
+`Commerce` in its Deptrac ruleset, and that asymmetry is the whole point —
+the platform has to serve four verticals without knowing anything about any of
+them.
+
+### B1. Products and variants, split the way fashion forces
+
+Merchandising lives on the product; everything that differs per option
+combination lives on the variant. One shirt is six rows, and the S/Black one
+can be out of stock while the M/White one is not.
+
+Two decisions that are not obvious:
+
+- **`option_signature`.** A canonical, sorted, case-folded rendering of the
+  option values (`colour:black|size:m`), uniquely indexed per product. jsonb
+  cannot be uniquely indexed in a way that survives key ordering, and two
+  variants that both mean M/Black is not a cosmetic problem: stock splits
+  across them, and the storefront shows one while orders decrement the other.
+- **Stock is two numbers, not one.** `stock_on_hand` is what is physically
+  there; `stock_reserved` is what unpaid orders are holding. This exists from
+  the catalogue slice rather than the cart slice because the offline payment
+  rail makes it unavoidable — a Fawry reference holds stock for up to 72 hours
+  before any money moves. A `CHECK (stock_reserved <= stock_on_hand)`
+  constraint backs it in the database, because reservation arithmetic under
+  concurrency is exactly where an off-by-one becomes stock sold twice.
+
+### B2. Carts remember intent; orders remember the agreement
+
+A cart stores **no prices at all**. Pricing is read live from the variant on
+every request, so a cart abandoned three weeks ago cannot make a merchant
+honour a figure they have since changed. An order stores **every** display
+field as its own column — name, SKU, options, unit price — so renaming,
+re-pricing or deleting a product cannot rewrite what someone was charged. The
+variant link on an order line is `nullOnDelete`: deleting a product changes the
+catalogue, not the history of what was sold.
+
+Carts are addressed by an opaque `X-Cart-Token` rather than a session cookie.
+The storefront is server-rendered on a different origin from the API, so a
+cookie would have to be a cross-origin credential on every request. Cart lines
+are resolved *through* the cart and never by id alone — the endpoint is
+anonymous, so route-model binding would let anyone holding any cart token edit
+anybody else's basket, and row-level security cannot help because both baskets
+belong to the same shop.
+
+### B3. Reservations are claimed in the WHERE clause
+
+Every stock movement is a single conditional `UPDATE`, never a read, a decision
+in PHP and a write:
+
+```sql
+UPDATE product_variants
+   SET stock_reserved = stock_reserved + CASE WHEN track_inventory THEN ? ELSE 0 END
+ WHERE id = ? AND (NOT track_inventory OR stock_on_hand - stock_reserved >= ?)
+```
+
+Two shoppers reaching for the last shirt both read "1 available", and a check
+made in PHP passes for both of them. A check made in the WHERE clause passes
+for exactly one. Untracked variants are handled inside the same statement
+rather than by an early return on a PHP-side flag, because a flag read from a
+model loaded seconds ago is a stale read — and a stale read that says
+"untracked" skips the availability check entirely.
+
+### B4. Checkout's ordering is the design
+
+1. **Reserve.** The only step that can fail for a reason the shopper can act
+   on, and the only one cheap to undo.
+2. **Meter.** `orders` is a *flow* metric — it counts orders placed in a period
+   and is never given back, because cancelling an order does not un-place it.
+   That makes it the one irreversible step, so it goes after everything that
+   might still refuse the checkout. (Contrast `products` and `storage_mb`,
+   which are *stock* metrics and are released on delete.)
+3. **Write the order**, with every price and name copied onto it.
+4. **Only then call the gateway** — outside the transaction, because an
+   external HTTP call inside one holds row locks for as long as the provider
+   takes to answer.
+
+Steps 1–3 share a transaction, so a failure anywhere in them rolls the
+reservations back rather than relying on compensating writes that can
+themselves fail. The one seam that cannot be transactional is the meter, which
+lives in Redis: if the order write fails after it was charged, the tenant's
+order count is one high for the period. That is the least harmful place to put
+the inaccuracy, and it is stated rather than discovered.
+
+Order numbers are `max(number) + 1` under the tenant's own row-level security,
+starting near 1000. Per shop, so it never leaks how many orders the platform as
+a whole has taken — a shop's first order should not be numbered 84,312 — and a
+unique index plus a savepoint-guarded retry handles two checkouts computing the
+same number.
+
+### B5. `PaymentSettled` is the seam, and it finally has a consumer
+
+Phase 0 built `PaymentSettled`, `reservesRatherThanCommits()` and
+`releasesReservation()` for a vertical that did not exist yet. They are now
+consumed by `Commerce\Orders\Listeners\SettleOrder`, registered in a separate
+`CommerceServiceProvider` — a *platform* provider that registers an orders
+listener has made the platform depend on commerce in the one place nothing else
+can see.
+
+One listener serves both rails without knowing which it is on: a card settles
+inside the checkout request, a Fawry reference settles from a provider callback
+three days later in a queued job. Both arrive with the tenant already bound.
+
+**Idempotency is a claim, not a check.** Settlements are not delivered once —
+providers retry, an hourly expiry sweep can race a payment made two minutes
+ago, and a merchant can cancel an order in the same second it settles. Reading
+"is it paid?" to decide whether to decrement stock answers the wrong question;
+the right one is "has this order's stock already been accounted for?", and only
+a recorded state can answer it. So `orders.inventory_state` moves
+`reserved → committed | released` via a conditional UPDATE. Exactly one caller
+wins; everyone else does nothing.
+
+A refund deliberately does **not** restock. By the time one happens the goods
+have usually shipped, and a platform that silently put them back on the shelf
+would oversell the merchant's next customer.
+
+A payment that succeeds against an already-cancelled order logs `critical`
+rather than returning quietly. It is reachable — a customer can pay a Fawry
+reference minutes after the merchant cancelled the order it was issued for —
+and it means somebody has been charged for goods this shop is no longer
+holding.
+
+### B6. The outbound webhook path gets its first production caller
+
+`WebhookDispatcher` was built, tested and then never invoked by anything, which
+is the same as not having it. Checkout now publishes `order.placed`,
+`order.paid`, `order.cancelled` and `order.refunded` through a new
+`Shared\Contracts\OutboundEvents` — a contract rather than a direct call,
+because a vertical raising `order.paid` should not know that the platform
+delivers it over HTTP with HMAC signatures and exponential backoff, any more
+than it knows how storage is metered.
+
+### B7. What the tests had to be made to catch
+
+The first run of the checkout suite passed 21 of 21, which in this repository
+is a reason for suspicion rather than confidence. Mutating
+`Inventory::apply()` to ignore the affected-row count was caught immediately.
+Mutating `OrderSettlement::claim()` to drop its `inventory_state = 'reserved'`
+condition was **not**: every route into that service checks the order's status
+first, so no request can reach a second commit — which is exactly why the guard
+underneath needed its own test rather than being assumed from the outside. The
+race it protects against (a provider callback crossing a merchant's
+cancellation) is not reproducible from a single request, so it is now driven
+directly, and asserts both that the stock moves once and that the merchant's
+systems are told once.

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Commerce\Catalogue\Http\Controllers\ProductController;
+use App\Modules\Commerce\Orders\Http\Controllers\OrderController;
 use App\Modules\Platform\Billing\Http\Controllers\PaymentController;
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
 use App\Modules\Platform\Identity\Http\Controllers\AuthController;
@@ -71,6 +72,12 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+    // The order book. Read-only plus a cancellation, which is the only write
+    // that moves stock from this side; fulfilment is its own slice.
+    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
     Route::get('webhooks/subscriptions', [WebhookSubscriptionController::class, 'index'])->name('webhooks.index');
     Route::post('webhooks/subscriptions', [WebhookSubscriptionController::class, 'store'])->name('webhooks.store');

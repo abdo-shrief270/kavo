@@ -60,7 +60,7 @@ final class OutboundWebhookDeliveryTest extends TestCase
 
     private function deliver(): WebhookDelivery
     {
-        app(WebhookDispatcher::class)->dispatch($this->tenant, 'order.placed', ['id' => 'ord_1']);
+        app(WebhookDispatcher::class)->publish($this->tenant, 'order.placed', ['id' => 'ord_1']);
 
         return WebhookDelivery::query()->latest('id')->firstOrFail();
     }
@@ -214,7 +214,7 @@ final class OutboundWebhookDeliveryTest extends TestCase
     {
         $this->subscription->update(['is_active' => false]);
 
-        $count = app(WebhookDispatcher::class)->dispatch($this->tenant, 'order.placed', ['id' => 'ord_2']);
+        $count = app(WebhookDispatcher::class)->publish($this->tenant, 'order.placed', ['id' => 'ord_2']);
 
         $this->assertSame(0, $count);
         $this->assertSame(0, WebhookDelivery::query()->count());
@@ -223,7 +223,7 @@ final class OutboundWebhookDeliveryTest extends TestCase
     #[Test]
     public function only_subscribed_event_types_are_delivered(): void
     {
-        $count = app(WebhookDispatcher::class)->dispatch($this->tenant, 'order.refunded', ['id' => 'ord_3']);
+        $count = app(WebhookDispatcher::class)->publish($this->tenant, 'order.refunded', ['id' => 'ord_3']);
 
         $this->assertSame(0, $count);
         $this->assertSame(0, WebhookDelivery::query()->count());

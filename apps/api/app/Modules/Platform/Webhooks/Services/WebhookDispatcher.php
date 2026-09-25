@@ -8,14 +8,19 @@ use App\Modules\Platform\Identity\Models\Tenant;
 use App\Modules\Platform\Webhooks\Jobs\DeliverOutboundWebhook;
 use App\Modules\Platform\Webhooks\Models\WebhookDelivery;
 use App\Modules\Platform\Webhooks\Models\WebhookSubscription;
+use App\Shared\Contracts\OutboundEvents;
 
 /**
  * Fans one platform event out to every subscription that asked for it.
+ *
+ * Reached through the OutboundEvents contract rather than by name, so a
+ * vertical raising `order.paid` depends on there being somewhere to say it
+ * and not on this class, its queue, or its retry schedule.
  */
-final class WebhookDispatcher
+final class WebhookDispatcher implements OutboundEvents
 {
     /** @param array<string, mixed> $payload */
-    public function dispatch(Tenant $tenant, string $eventType, array $payload): int
+    public function publish(Tenant $tenant, string $eventType, array $payload): int
     {
         $subscriptions = WebhookSubscription::query()
             ->where('tenant_id', $tenant->getKey())
