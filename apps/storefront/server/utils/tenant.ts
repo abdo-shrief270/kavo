@@ -17,22 +17,11 @@ export interface StorefrontConfig {
  */
 export const getStorefrontConfig = defineCachedFunction(
   async (hostname: string, event: H3Event): Promise<StorefrontConfig> => {
-    const { apiBase, internalToken } = useRuntimeConfig(event)
-    const requestId = String(event.context.requestId ?? '')
+    const { apiBase } = useRuntimeConfig(event)
 
     return await $fetch<StorefrontConfig>('/api/storefront/config', {
       baseURL: apiBase,
-      // X-Forwarded-Host, not Host: Node's fetch treats Host as a forbidden
-      // header and drops it silently, so the API would see the loopback
-      // address and resolve no tenant at all. The API trusts this header only
-      // from its configured proxies.
-      headers: {
-        'X-Forwarded-Host': hostname,
-      // Identifies this call as the storefront's own and carries the render's
-      // correlation id, so the API's logs join up with this one's.
-        'X-Internal-Token': internalToken,
-        'X-Request-Id': requestId,
-      },
+      headers: apiHeaders(event, hostname),
     })
   },
   {

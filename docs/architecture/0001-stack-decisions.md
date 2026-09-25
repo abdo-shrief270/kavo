@@ -1051,3 +1051,51 @@ race it protects against (a provider callback crossing a merchant's
 cancellation) is not reproducible from a single request, so it is now driven
 directly, and asserts both that the stock moves once and that the merchant's
 systems are told once.
+
+### B8. The storefront that spends the money, and two defects it exposed
+
+An API nothing calls is the same defect class as a dispatcher nothing invokes,
+so the cart and checkout are wired through the Nuxt storefront in the same
+slice: add to basket from the product page, a basket with live prices, a
+checkout that offers the rails the shop can actually be paid through, and an
+order page a customer comes back to days later with their kiosk code.
+
+The cart token is an **httpOnly cookie on the storefront's own origin**, not on
+the API's. The browser only ever talks to the storefront, so the cookie needs
+no cross-site relaxation and script on the page never reads it; the Nitro
+server translates it into the `X-Cart-Token` header the API expects. The cart,
+checkout and order pages are `ssr: false` with `X-Robots-Tag: noindex` — a
+cached cart is one shopper's basket served to another, and a crawler that found
+an order page would publish somebody's order.
+
+Building it compiled. Then it was run — a real API on :8000, a real Nitro
+build on :3000, a real purchase — and two things that compiled fine were
+wrong:
+
+- **The cart cookie was `Secure` because the *build* was production, not
+  because the *connection* was.** A production build served over plain http
+  sets `Secure`, the browser never sends the cookie back, and every request
+  quietly starts a new empty basket. It now follows `X-Forwarded-Proto`, which
+  is the axis that was always meant: secure exactly when the connection is.
+- **The API's refusal never reached the shopper.** An error thrown out of a
+  Nitro event handler is re-reported as a generic "Server Error" with no body,
+  so "Only 4 left", "That item is out of stock" and "Your basket mixes
+  currencies" all arrived as nothing. The upstream status and JSON body are now
+  passed through deliberately — and only for 4xx, because a 5xx from the API is
+  ours and its text belongs in logs, not on a product page.
+
+Running it also found a defect in Phase 0 code that no Phase 0 surface had
+exposed: `PaymentIntent::customerAction()` published the kiosk reference
+whenever the column was set, regardless of the payment's state. An intent keeps
+its `payment_reference` forever — it is the history of what was issued — so a
+**paid** order's page told the customer to go and pay the same code again, and
+an **expired** one told them to pay for stock that had already gone back on the
+shelf. It now returns nothing once the intent is no longer open or its window
+has closed, which is what its own docblock always claimed it did.
+
+The end-to-end run, for the record: two orders placed through the storefront by
+two different shoppers. `ORD-1001`, two shirts on the reference rail, held
+`reserved=2 available=0` for three days and committed only when the kiosk
+payment arrived. `ORD-1002`, one shirt on the card rail, paid inside the
+request. Stock moved from `4/2/0` to `3/0/0` across the three sizes, numbered
+per tenant from 1001, with nothing left reserved.

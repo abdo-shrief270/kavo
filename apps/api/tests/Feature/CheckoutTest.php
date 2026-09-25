@@ -428,6 +428,50 @@ final class CheckoutTest extends TestCase
             ->assertStatus(404);
     }
 
+    /**
+     * An intent keeps its payment_reference forever — it is the history of
+     * what was issued. Rendering the order page off that column alone tells
+     * somebody who has already paid to go and pay the same code again at a
+     * kiosk, which is a second charge for one order.
+     */
+    #[Test]
+    public function a_paid_order_stops_telling_the_customer_to_go_and_pay(): void
+    {
+        $this->storefront('POST', '/checkout', $this->details('reference'), token: $this->fillCart(1))
+            ->assertStatus(201);
+
+        $number = Order::query()->firstOrFail()->number;
+
+        $this->storefront('GET', '/orders/'.$number.'?email=nadia@example.test')
+            ->assertOk()
+            ->assertJsonPath('customer_action.type', 'reference');
+
+        $this->settle(PaymentStatus::Succeeded);
+
+        $this->storefront('GET', '/orders/'.$number.'?email=nadia@example.test')
+            ->assertOk()
+            ->assertJsonPath('order.status', 'paid')
+            ->assertJsonPath('customer_action', null);
+    }
+
+    /** And neither does one whose window closed with the stock released. */
+    #[Test]
+    public function an_expired_reference_stops_being_payable(): void
+    {
+        $this->storefront('POST', '/checkout', $this->details('reference'), token: $this->fillCart(1))
+            ->assertStatus(201);
+
+        $number = Order::query()->firstOrFail()->number;
+
+        $this->travel(4)->days();
+
+        $this->storefront('GET', '/orders/'.$number.'?email=nadia@example.test')
+            ->assertOk()
+            // Before the sweep has even run: the window is what closed it,
+            // not the job that notices.
+            ->assertJsonPath('customer_action', null);
+    }
+
     // --------------------------------------------------------------- quotas
 
     /**

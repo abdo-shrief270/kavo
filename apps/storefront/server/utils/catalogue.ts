@@ -39,22 +39,11 @@ export interface ProductPage {
  */
 export const getCatalogue = defineCachedFunction(
   async (hostname: string, query: string, page: number, event: H3Event): Promise<ProductPage> => {
-    const { apiBase, internalToken } = useRuntimeConfig(event)
-    const requestId = String(event.context.requestId ?? '')
+    const { apiBase } = useRuntimeConfig(event)
 
     return await $fetch<ProductPage>('/api/storefront/products', {
       baseURL: apiBase,
-      // X-Forwarded-Host, not Host: Node's fetch treats Host as a forbidden
-      // header and drops it silently, so the API would see the loopback
-      // address and resolve no tenant at all. The API trusts this header only
-      // from its configured proxies.
-      headers: {
-        'X-Forwarded-Host': hostname,
-      // Identifies this call as the storefront's own and carries the render's
-      // correlation id, so the API's logs join up with this one's.
-        'X-Internal-Token': internalToken,
-        'X-Request-Id': requestId,
-      },
+      headers: apiHeaders(event, hostname),
       query: { q: query || undefined, page },
     })
   },
@@ -69,25 +58,14 @@ export const getCatalogue = defineCachedFunction(
 /** One product. Keyed on hostname and slug, for the same reason. */
 export const getProduct = defineCachedFunction(
   async (hostname: string, slug: string, event: H3Event): Promise<ProductDetail> => {
-    const { apiBase, internalToken } = useRuntimeConfig(event)
-    const requestId = String(event.context.requestId ?? '')
+    const { apiBase } = useRuntimeConfig(event)
 
     // The API wraps a single resource in an envelope; the listing is not
     // wrapped the same way. Unwrapped here so pages never have to know which
     // endpoint returns which shape.
     const { product } = await $fetch<{ product: ProductDetail }>(`/api/storefront/products/${encodeURIComponent(slug)}`, {
       baseURL: apiBase,
-      // X-Forwarded-Host, not Host: Node's fetch treats Host as a forbidden
-      // header and drops it silently, so the API would see the loopback
-      // address and resolve no tenant at all. The API trusts this header only
-      // from its configured proxies.
-      headers: {
-        'X-Forwarded-Host': hostname,
-      // Identifies this call as the storefront's own and carries the render's
-      // correlation id, so the API's logs join up with this one's.
-        'X-Internal-Token': internalToken,
-        'X-Request-Id': requestId,
-      },
+      headers: apiHeaders(event, hostname),
     })
 
     return product

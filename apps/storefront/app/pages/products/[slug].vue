@@ -31,6 +31,19 @@ const matches = (options: Record<string, string>) =>
 
 const selected = computed(() => product.value?.variants.find(v => matches(v.options)) ?? null)
 
+const { add, pending, error } = useCart()
+const added = ref(false)
+
+async function addToCart() {
+  if (!selected.value) return
+
+  added.value = await add(selected.value.id)
+}
+
+// Changing size after adding should not leave a stale confirmation under the
+// new selection.
+watch(selected, () => { added.value = false })
+
 useSeoMeta({
   title: () => product.value?.name ?? 'Product',
   description: () => product.value?.description ?? `From ${tenant.value?.name ?? 'this shop'}.`,
@@ -87,8 +100,25 @@ useSeoMeta({
       <p v-if="selected && !selected.in_stock" class="product__status">Sold out in this combination.</p>
       <p v-else-if="!selected" class="product__status">That combination is not available.</p>
 
-      <!-- Checkout arrives with the cart. Rendering a button that does
-           nothing would be worse than not rendering one. -->
+      <button
+        v-else
+        type="button"
+        class="product__add"
+        :disabled="pending"
+        @click="addToCart"
+      >
+        {{ pending ? 'Adding…' : 'Add to basket' }}
+      </button>
+
+      <!--
+        The refusal the API gives back is the useful kind — "Only 2 left" —
+        and is shown verbatim rather than flattened into a generic failure.
+      -->
+      <p v-if="error" class="product__status product__status--bad" role="alert">{{ error }}</p>
+      <p v-else-if="added" class="product__status" role="status">
+        Added. <NuxtLink to="/cart">View your basket.</NuxtLink>
+      </p>
+
       <p v-if="product.description" class="product__description">{{ product.description }}</p>
     </div>
   </article>
@@ -153,6 +183,21 @@ useSeoMeta({
 }
 
 .product__status { opacity: 0.75; }
+.product__status--bad { color: #b42318; opacity: 1; }
+
+.product__add {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--kavo-color-primary);
+  color: var(--kavo-color-surface);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.product__add:disabled { opacity: 0.6; cursor: default; }
 
 .product__description { line-height: 1.6; margin-top: 1.5rem; }
 </style>

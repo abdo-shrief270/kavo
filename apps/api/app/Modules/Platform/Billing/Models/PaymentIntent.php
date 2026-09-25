@@ -91,9 +91,21 @@ final class PaymentIntent extends Model
         return $this->refunded_cents >= $this->amount_cents;
     }
 
-    /** What the customer still has to do, for the storefront to render. */
+    /**
+     * What the customer still has to do, for the storefront to render.
+     *
+     * Nothing, once the payment is settled or its window has closed. An
+     * intent keeps its `payment_reference` forever — it is the history of
+     * what was issued — so rendering it off that column alone tells someone
+     * who has already paid to go and pay again at a kiosk, and tells someone
+     * whose order was released to pay for stock that is no longer held.
+     */
     public function customerAction(): ?array
     {
+        if (! $this->status->isOpen() || $this->hasExpired()) {
+            return null;
+        }
+
         return match (true) {
             $this->redirect_url !== null => ['type' => 'redirect', 'url' => $this->redirect_url],
             $this->payment_reference !== null => [
