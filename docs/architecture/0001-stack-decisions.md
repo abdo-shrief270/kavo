@@ -1122,3 +1122,54 @@ can produce without trying:
 Each had a test written before the fix, and each test failed first: two with
 `SQLSTATE[22P02] invalid text representation`, one with a cart count of 1
 where it should have been 0.
+
+### B10. The platform is the merchant of record
+
+**Decided:** one set of gateway credentials for the whole platform. Every
+tenant's customers pay into the platform's Paymob and Fawry accounts, not into
+each merchant's own.
+
+The alternative was each tenant bringing their own acquirer account, which
+needs encrypted per-tenant credential storage, a settings screen, and a
+gateway manager that resolves credentials per request rather than once at boot.
+That is more code and more support burden, and it pushes onboarding friction
+onto the merchant — who now has to hold a Paymob contract before they can sell
+anything. Shopify Payments exists for exactly this reason.
+
+**No code changes.** The implementation already assumes this:
+`PaymentGatewayManager` resolves one gateway per rail from platform config,
+credentials are read once in `PlatformServiceProvider` so `config:cache` keeps
+working, and a settlement finds its tenant through the intent's globally unique
+`public_reference` rather than through whose account it landed in. What was
+built for isolation reasons turns out to be exactly what this model needs.
+
+**What it obliges, and what does not exist yet.** There are now two money
+flows, in opposite directions, and only one of them is modelled:
+
+| Flow | Direction | Modelled by |
+|---|---|---|
+| Subscription for the SaaS plan | tenant → platform | `subscriptions`, `invoices`, `invoice_lines` |
+| Order takings collected on a tenant's behalf | platform → tenant | **nothing** |
+
+A grep for `commission`, `payout`, `platform_fee` or `balance` across `app/`
+and the migrations returns nothing. The moment a real tenant takes a real
+order, the platform holds their money and has no record that says how much it
+owes, what commission it kept, or whether that has been paid. The amount is
+*derivable* — paid orders carry `total_cents` per tenant — but derivable is not
+reconciled, and it is certainly not a payout.
+
+So a ledger is now a prerequisite, not a nice-to-have, and it must exist before
+the first real tenant rather than after:
+
+- a per-order split: gross, platform commission, net owed to the merchant;
+- a running per-tenant balance, credited on settlement and debited on refund —
+  which is also why refunds come out of the platform's float, and why a refund
+  against a tenant whose balance is already paid out is a real case rather than
+  a theoretical one;
+- payout records, so "what have we actually sent them" is a fact rather than a
+  spreadsheet.
+
+Two consequences worth naming, because they are the platform's now and were the
+merchant's under the other model: chargebacks land on the platform's acquirer
+relationship, and the platform is the party the acquirer knows. Neither changes
+the code; both change who answers the phone.
