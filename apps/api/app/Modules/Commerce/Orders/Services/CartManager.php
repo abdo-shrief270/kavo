@@ -59,7 +59,11 @@ final readonly class CartManager
         $variant = $this->sellableVariant($variantId);
 
         $existing = $cart->items()->where('product_variant_id', $variant->getKey())->first();
-        $wanted = ($existing?->quantity ?? 0) + $quantity;
+
+        // Spelled out rather than `?->quantity ?? 0`: static analysis reads
+        // first() on this builder as non-nullable, so the nullsafe reads as
+        // dead code even though the null is the ordinary case here.
+        $wanted = ($existing === null ? 0 : $existing->quantity) + $quantity;
 
         $this->assertAvailable($variant, $wanted);
 
