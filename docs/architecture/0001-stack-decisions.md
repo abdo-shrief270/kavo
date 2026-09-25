@@ -1099,3 +1099,26 @@ two different shoppers. `ORD-1001`, two shirts on the reference rail, held
 payment arrived. `ORD-1002`, one shirt on the card rail, paid inside the
 request. Stock moved from `4/2/0` to `3/0/0` across the three sizes, numbered
 per tenant from 1001, with nothing left reserved.
+
+### B9. Three more, found by reading the diff for what a user could type
+
+A pass over the slice looking specifically for inputs a shopper or a merchant
+can produce without trying:
+
+- **`GET /orders/{number}` was a 500 on any non-numeric segment.** The segment
+  is compared against a bigint column, and Postgres answers
+  `number = 'abc'` with an error rather than with no rows. The route is now
+  constrained to digits, so a typo is a 404.
+- **The merchant's order search was a 500 on any word.** Same cause, reached
+  by typing a customer's name into the search box — the most ordinary thing
+  that box is for. The number clause is now added only when the term is all
+  digits.
+- **A checkout with no cart token wrote a cart row.** The refusal was correct
+  ("Your basket is empty", 422) but it went through `resolve()`, which starts
+  a cart when none is presented — so every doomed checkout left behind a row
+  nobody holds a token for. Checkout now reads through `existing()`, which
+  never creates one.
+
+Each had a test written before the fix, and each test failed first: two with
+`SQLSTATE[22P02] invalid text representation`, one with a cart count of 1
+where it should have been 0.

@@ -55,7 +55,9 @@ final class CheckoutController
             'return_url' => ['sometimes', 'nullable', 'url'],
         ]);
 
-        $cart = $carts->resolve($request->header('X-Cart-Token'));
+        // existing(), not resolve(): a checkout with no basket is refused, and
+        // must not leave a cart row behind for a token nobody was given.
+        $cart = $carts->existing($request->header('X-Cart-Token'));
 
         $placed = $checkout->place($cart, new CheckoutDetails(
             customerName: $validated['customer_name'],

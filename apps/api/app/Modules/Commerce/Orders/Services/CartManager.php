@@ -35,18 +35,28 @@ final readonly class CartManager
     /** Find a cart by its token, or start one. Never returns an expired cart. */
     public function resolve(?string $token): Cart
     {
-        $cart = $token === null || $token === ''
-            ? null
-            : Cart::query()->with('items.variant')->where('token', $token)->first();
-
-        if ($cart !== null && ! $cart->hasExpired()) {
-            return $cart;
-        }
-
-        return Cart::create([
+        return $this->existing($token) ?? Cart::create([
             'token' => Cart::newToken(),
             'expires_at' => now()->addDays(Cart::LIFETIME_DAYS),
         ]);
+    }
+
+    /**
+     * An existing, unexpired cart — never a new one.
+     *
+     * Checkout reads through this rather than resolve(): a checkout with no
+     * basket is a doomed request, and starting a cart for it writes a row
+     * nobody will ever hold a token for.
+     */
+    public function existing(?string $token): ?Cart
+    {
+        if ($token === null || $token === '') {
+            return null;
+        }
+
+        $cart = Cart::query()->with('items.variant')->where('token', $token)->first();
+
+        return $cart !== null && ! $cart->hasExpired() ? $cart : null;
     }
 
     /**

@@ -557,6 +557,41 @@ final class CheckoutTest extends TestCase
             ->assertJsonPath('data.0.number', Order::query()->max('number'));
     }
 
+    /** A shopper's order number is in the URL, so any string can arrive there. */
+    #[Test]
+    public function a_nonsense_order_number_is_not_found_rather_than_a_crash(): void
+    {
+        $this->storefront('GET', '/orders/not-a-number?email=nadia@example.test')
+            ->assertStatus(404);
+    }
+
+    /** And a merchant searching their order book types words, not integers. */
+    #[Test]
+    public function searching_orders_by_name_does_not_crash_on_the_number_column(): void
+    {
+        $this->storefront('POST', '/checkout', $this->details('reference'), token: $this->fillCart(1))
+            ->assertStatus(201);
+
+        $this->merchant('GET', '/api/orders?q=Nadia')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->merchant('GET', '/api/orders?q=1001')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    /** An empty checkout must not litter the table with carts nobody holds. */
+    #[Test]
+    public function checking_out_with_no_basket_leaves_nothing_behind(): void
+    {
+        $this->storefront('POST', '/checkout', $this->details('reference'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('cart');
+
+        $this->assertSame(0, Cart::query()->count());
+    }
+
     // ------------------------------------------------------------- webhooks
 
     /**

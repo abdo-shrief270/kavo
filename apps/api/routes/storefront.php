@@ -40,5 +40,10 @@ Route::middleware('tenant')->group(function (): void {
 
     // The "where is my order" page. Offline rails mean a customer comes back
     // to this days after placing it.
-    Route::get('orders/{number}', [CheckoutController::class, 'show'])->name('orders.show');
+    // Constrained to digits: the segment is matched against a bigint column,
+    // and Postgres answers a non-numeric comparison with an error rather than
+    // no rows — a 500 on a URL anyone can type.
+    Route::get('orders/{number}', [CheckoutController::class, 'show'])
+        ->whereNumber('number')
+        ->name('orders.show');
 });

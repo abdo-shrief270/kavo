@@ -67,14 +67,20 @@ final readonly class Checkout
     ) {}
 
     /**
+     * @param  ?Cart  $cart  null when the shopper presented no token, or one
+     *                       that has expired — the same dead end as an empty
+     *                       basket, and answered with the same message
      * @return array{order: Order, payment: ?PaymentIntent}
      *
      * @throws OutOfStock|QuotaExceeded|ValidationException
      */
-    public function place(Cart $cart, CheckoutDetails $details): array
+    public function place(?Cart $cart, CheckoutDetails $details): array
     {
         $tenant = $this->tenants->getOrFail('placing an order');
         $lines = $this->sellableLines($cart);
+
+        // Not null past sellableLines(), which refuses an absent basket.
+        assert($cart !== null);
 
         $order = DB::transaction(function () use ($tenant, $cart, $lines, $details): Order {
             foreach ($lines as $line) {
@@ -184,11 +190,11 @@ final readonly class Checkout
      *
      * @return list<array{variant: ProductVariant, quantity: int}>
      */
-    private function sellableLines(Cart $cart): array
+    private function sellableLines(?Cart $cart): array
     {
-        $cart->loadMissing('items.variant.product');
+        $cart?->loadMissing('items.variant.product');
 
-        if ($cart->items->isEmpty()) {
+        if ($cart === null || $cart->items->isEmpty()) {
             throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
         }
 

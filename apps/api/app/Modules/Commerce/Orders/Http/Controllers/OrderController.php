@@ -27,8 +27,14 @@ final class OrderController
                 $request->string('q')->toString(),
                 fn ($query, string $term) => $query->where(function ($q) use ($term): void {
                     $q->where('customer_name', 'ilike', '%'.$term.'%')
-                        ->orWhere('customer_email', 'ilike', '%'.$term.'%')
-                        ->orWhere('number', (string) $term);
+                        ->orWhere('customer_email', 'ilike', '%'.$term.'%');
+
+                    // Only when it could be one. `number` is a bigint, and
+                    // Postgres answers `number = 'nadia'` with an error rather
+                    // than no rows — so searching by name would 500.
+                    if (ctype_digit($term)) {
+                        $q->orWhere('number', (int) $term);
+                    }
                 }),
             )
             ->latest('number')
