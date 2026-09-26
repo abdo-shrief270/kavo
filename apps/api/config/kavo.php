@@ -104,6 +104,21 @@ return [
         'reference_expiry_hours' => (int) env('KAVO_REFERENCE_EXPIRY_HOURS', 72),
     ],
 
+    /*
+     | What the platform keeps, and in what currency it settles with merchants.
+     |
+     | The platform is the merchant of record: customers pay into its own
+     | gateway accounts, so every settled sale is a debt to the shop that made
+     | it, less this cut. See ADR 0001 B10.
+     |
+     | Basis points rather than a percentage, so the rate is an integer and the
+     | arithmetic never touches a float. 100 = 1%.
+     */
+    'ledger' => [
+        'commission_basis_points' => (int) env('KAVO_COMMISSION_BASIS_POINTS', 100),
+        'currency' => env('KAVO_SETTLEMENT_CURRENCY', 'EGP'),
+    ],
+
     'webhooks' => [
         /*
          | One verifier per inbound provider. A provider with no entry here is

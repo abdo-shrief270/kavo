@@ -132,6 +132,11 @@ final class ArchitectureTest extends BaseTestCase
 
             // The payment contract's own vocabulary.
             'App\Modules\Platform\Billing\Payments\PaymentRail',
+            // And the ledger contract's: a sum of money, which every module
+            // that handles one already speaks in. Added deliberately when the
+            // merchant ledger landed — an amount and a currency travelling as
+            // two loose arguments is exactly what this type exists to stop.
+            'App\Modules\Platform\Billing\Payments\Money',
             'App\Modules\Platform\Billing\Payments\PaymentRequest',
             'App\Modules\Platform\Billing\Payments\PaymentResult',
             'App\Modules\Platform\Billing\Payments\SettlementNotice',

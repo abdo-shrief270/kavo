@@ -6,6 +6,7 @@ use App\Modules\Commerce\Catalogue\Http\Controllers\ProductController;
 use App\Modules\Commerce\Catalogue\Http\Controllers\VariantStockController;
 use App\Modules\Commerce\Orders\Http\Controllers\OrderController;
 use App\Modules\Platform\Billing\Http\Controllers\PaymentController;
+use App\Modules\Platform\Billing\Ledger\Http\Controllers\BalanceController;
 use App\Modules\Platform\Domains\Http\Controllers\DomainController;
 use App\Modules\Platform\Identity\Http\Controllers\AuthController;
 use App\Modules\Platform\Identity\Http\Controllers\TenantController;
@@ -39,6 +40,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::post('domains', [DomainController::class, 'store'])->name('domains.store');
     Route::post('domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
     Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
+    /*
+     | What the platform owes this merchant. Read-only: the money sits in the
+     | platform's gateway accounts, so sending it is the platform's action.
+     */
+    Route::get('balance', [BalanceController::class, 'show'])->name('balance.show');
+    Route::get('payouts', [BalanceController::class, 'payouts'])->name('payouts.index');
 
     Route::get('payments/rails', [PaymentController::class, 'rails'])->name('payments.rails');
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');

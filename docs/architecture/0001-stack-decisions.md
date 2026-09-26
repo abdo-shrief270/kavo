@@ -1234,3 +1234,75 @@ two variants from a Size axis, restocked one from 4 to 14 through the new
 endpoint, listed both orders with their totals, opened one and saw the
 snapshot it froze at checkout, confirmed cancel is not offered on a paid order,
 and searched the order book by customer name — the query that used to 500.
+
+### B12. The merchant ledger — 1% commission, and a balance that cannot drift
+
+B10 decided the platform is the merchant of record and named the obligation it
+created: every settled order is a debt to the shop that made it, and nothing
+modelled that direction of money. This is that ledger. The rate is **1%**,
+stored as basis points (`KAVO_COMMISSION_BASIS_POINTS=100`).
+
+**Entries are append-only, and the model refuses to be otherwise.** A balance
+you can edit is a balance nobody can dispute, and "what did we owe them in
+March" stops being answerable the moment a row can be corrected in place. A
+mistake is a new `Adjustment` entry that says who made it and why. Enforced in
+`LedgerEntry::booted()` rather than by convention, because the mistake it
+prevents is silent and permanent.
+
+**The balance is derived, never stored.** A cached total is a second source of
+truth that can drift from the entries behind it, and the day it does is the day
+a merchant is paid the wrong amount. Summing costs a query; drift costs a
+reconciliation nobody wins. If the sum ever becomes slow the fix is a
+materialised total *with a test that it still agrees* — not now, and not
+without numbers to justify it.
+
+**One signed column, not a debit/credit pair.** The balance is then a sum and
+cannot disagree with itself; there is no second column to get the sign wrong
+in. The sign comes from the entry *type*, never from the caller: a commission
+credited instead of debited pays the merchant for the privilege of being
+charged, and nothing downstream would notice. Mutating
+`LedgerEntryType::sign()` to credit a commission fails nine of the fourteen
+ledger tests.
+
+**Rounding goes to the merchant.** 1% of 12,345 piastres is 123.45; integer
+division truncates to 123. Over a million orders that is a few pounds lost to
+the platform, which is the right direction for it to fall — and basis points
+with `intdiv` means the arithmetic never touches a float.
+
+**A refund returns the commission.** The platform earns nothing on a sale that
+did not happen. Stripe keeps its fee; this does not. One line to change if that
+ever becomes the wrong call.
+
+**Payouts are debited when created, not when they arrive.** A transfer takes
+hours or days to clear, and a balance that still shows the money during that
+window invites a second payout of the same funds — the same reasoning that
+reserves stock at checkout instead of committing it at payment. A failed
+transfer reverses the debit and the money is owed again. Creation locks the
+tenant row, so the balance check and the debit are one indivisible step: two
+administrators clicking at once would otherwise each see a balance that covers
+their payout.
+
+**The balance refuses to answer with no tenant bound.** Row-level security
+fails closed, which is right — but "closed" for a `SUM` is the number zero, and
+a balance that silently reads zero gets paid out as zero. `LedgerService`
+checks the bound GUC and throws instead.
+
+**What the admin console cannot do from platform scope.** Platform scope only
+removes the Eloquent global scope; row-level security is a Postgres policy and
+still matches nothing with no tenant bound. So every payout write runs *bound
+to the tenant it concerns*, through `runAs` and `runBound` — and the payout
+itself is loaded inside that block rather than by route-model binding, which
+would run outside it. The one genuinely cross-tenant query, "whose money am I
+holding", goes through the schema owner and is audited, the same shape as the
+settlement lookup in `ApplyGatewaySettlement`.
+
+That last one also dictated a test: a row created inside the test's own
+transaction is invisible to the owner connection, so `PlatformBalancesTest` is
+non-transactional like `SettlementRoutingTest`. Its first draft was
+transactional, read an empty table, and passed for the wrong reason.
+
+**One bug the tests found in this slice's own code.** Catching the duplicate-
+entry violation inside the caller's transaction left the transaction aborted,
+so the *commission* on the very sale being recorded then failed with "current
+transaction is aborted". The insert now runs in a savepoint. Idempotency that
+breaks the write it was protecting is worse than no idempotency at all.

@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Modules\Platform\Analytics\Console\EnsureAnalyticsPartitions;
 use App\Modules\Platform\Analytics\Console\FlushAnalyticsBuffer;
 use App\Modules\Platform\Analytics\Services\BufferedAnalyticsIngestor;
+use App\Modules\Platform\Billing\Ledger\Services\LedgerService;
 use App\Modules\Platform\Billing\Listeners\ApplyGatewaySettlement;
 use App\Modules\Platform\Billing\Payments\Console\ExpireOverduePayments;
 use App\Modules\Platform\Billing\Payments\Gateways\FawryGateway;
@@ -24,6 +25,7 @@ use App\Modules\Platform\Observability\Services\RequestContext;
 use App\Modules\Platform\Webhooks\Services\WebhookDispatcher;
 use App\Shared\Contracts\AnalyticsIngestor;
 use App\Shared\Contracts\Entitlements;
+use App\Shared\Contracts\MerchantLedger;
 use App\Shared\Contracts\OutboundEvents;
 use App\Shared\Contracts\ResolvesHosts;
 use App\Shared\Contracts\WhatsAppGateway;
@@ -66,6 +68,10 @@ final class PlatformServiceProvider extends ServiceProvider
         // How a vertical says something happened without knowing that the
         // platform delivers it over HTTP with signatures and backoff.
         $this->app->singleton(OutboundEvents::class, WebhookDispatcher::class);
+
+        // How a vertical reports a sale without knowing what the platform
+        // keeps of it. The commission is platform policy, not commerce's.
+        $this->app->singleton(MerchantLedger::class, LedgerService::class);
 
         // Behind the container so tests can hand the destination guard
         // answers that public DNS will never give them.

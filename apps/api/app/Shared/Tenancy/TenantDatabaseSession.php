@@ -63,6 +63,21 @@ final readonly class TenantDatabaseSession
         }
     }
 
+    /**
+     * Which tenant this connection is bound to, if any.
+     *
+     * Exposed so code that reads money can refuse to answer with nothing
+     * bound. Row-level security fails closed, which is right — but "closed"
+     * for a SUM is the number zero, and a balance that silently reads zero is
+     * worse than one that refuses.
+     */
+    public function boundTenantId(): ?int
+    {
+        $value = $this->currentValue();
+
+        return $value === null || $value === '' ? null : (int) $value;
+    }
+
     /** The GUC as Postgres currently has it, or null outside Postgres. */
     private function currentValue(): ?string
     {

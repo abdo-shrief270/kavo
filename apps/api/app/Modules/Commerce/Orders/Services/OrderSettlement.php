@@ -8,6 +8,8 @@ use App\Modules\Commerce\Catalogue\Services\Inventory;
 use App\Modules\Commerce\Orders\Enums\InventoryState;
 use App\Modules\Commerce\Orders\Enums\OrderStatus;
 use App\Modules\Commerce\Orders\Models\Order;
+use App\Modules\Platform\Billing\Payments\Money;
+use App\Shared\Contracts\MerchantLedger;
 use App\Shared\Contracts\OutboundEvents;
 use App\Shared\Enums\PaymentStatus;
 use App\Shared\Tenancy\TenantContext;
@@ -33,6 +35,7 @@ final readonly class OrderSettlement
     public function __construct(
         private Inventory $inventory,
         private OutboundEvents $events,
+        private MerchantLedger $ledger,
         private TenantContext $tenants,
     ) {}
 
@@ -90,9 +93,11 @@ final readonly class OrderSettlement
             'closed_at' => null,
         ])->save();
 
-        // Only announced by whoever won the claim, so a retried callback does
-        // not fire a second order.paid at the merchant's own systems.
+        // Only done by whoever won the claim, so a retried callback neither
+        // fires a second order.paid at the merchant's own systems nor credits
+        // them twice. The ledger's own unique index is the backstop.
         if ($committed) {
+            $this->credit($order);
             $this->announce($order, 'order.paid');
         }
     }
@@ -136,7 +141,36 @@ final readonly class OrderSettlement
             'closed_at' => $order->closed_at ?? now(),
         ])->save();
 
+        // The customer's money went back, so it comes off what the platform
+        // owes this merchant — and the commission goes back with it, because
+        // the platform earns nothing on a sale that did not happen.
+        $this->ledger->recordRefund(
+            $this->tenants->getOrFail('refunding an order'),
+            new Money($order->total_cents, $order->currency),
+            'order',
+            (int) $order->getKey(),
+            'Order '.$order->reference(),
+        );
+
         $this->announce($order, 'order.refunded');
+    }
+
+    /**
+     * The platform collected this money on the merchant's behalf, so it now
+     * owes it to them, less its commission.
+     *
+     * getOrFail rather than the tolerant lookup announce() uses: a webhook
+     * that cannot name its tenant should not quietly skip crediting a sale.
+     */
+    private function credit(Order $order): void
+    {
+        $this->ledger->recordSale(
+            $this->tenants->getOrFail('crediting a settled order'),
+            new Money($order->total_cents, $order->currency),
+            'order',
+            (int) $order->getKey(),
+            'Order '.$order->reference(),
+        );
     }
 
     /**
