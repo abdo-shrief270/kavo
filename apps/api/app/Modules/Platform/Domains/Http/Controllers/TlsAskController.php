@@ -24,7 +24,7 @@ final class TlsAskController
 {
     public function __invoke(Request $request, TenantLocator $locator): Response
     {
-        $expected = (string) config('kavo.tls_ask_token');
+        $expected = (string) config('kaabosh.tls_ask_token');
 
         // Query string, because Caddy's `ask` sends a bare GET and offers no
         // way to add a header — a token expected in one would have rejected

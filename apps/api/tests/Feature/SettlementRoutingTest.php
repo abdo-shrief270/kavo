@@ -58,7 +58,7 @@ final class SettlementRoutingTest extends TestCase
 
     private function truncateCommittedFixtures(): void
     {
-        DB::connection(config('kavo.tenancy.owner_connection'))->unprepared(
+        DB::connection(config('kaabosh.tenancy.owner_connection'))->unprepared(
             'truncate payment_events, payment_intents, webhook_events, tenant_user, users, tenants restart identity cascade',
         );
     }
@@ -148,7 +148,7 @@ final class SettlementRoutingTest extends TestCase
     #[Test]
     public function an_ambiguous_public_reference_settles_nothing(): void
     {
-        $owner = DB::connection(config('kavo.tenancy.owner_connection'));
+        $owner = DB::connection(config('kaabosh.tenancy.owner_connection'));
         $owner->statement('alter table payment_intents drop constraint payment_intents_public_reference_unique');
 
         try {

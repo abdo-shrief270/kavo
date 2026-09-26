@@ -1,4 +1,4 @@
-import type { AppNotification } from '@kavo/api-client'
+import type { AppNotification } from '@kaabosh/api-client'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'

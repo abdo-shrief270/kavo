@@ -69,7 +69,7 @@ useSeoMeta({ title: 'Your basket' })
   gap: 1rem;
   align-items: center;
   padding: 1rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--kavo-color-text) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 12%, transparent);
 }
 
 .cart__name { color: inherit; font-weight: 600; text-decoration: none; }
@@ -81,7 +81,7 @@ useSeoMeta({ title: 'Your basket' })
 .cart__quantity button {
   width: 2rem;
   height: 2rem;
-  border: 1px solid color-mix(in srgb, var(--kavo-color-text) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 25%, transparent);
   border-radius: 0.375rem;
   background: transparent;
   color: inherit;
@@ -109,8 +109,8 @@ useSeoMeta({ title: 'Your basket' })
   display: inline-block;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
-  background: var(--kavo-color-primary);
-  color: var(--kavo-color-surface);
+  background: var(--kaabosh-color-primary);
+  color: var(--kaabosh-color-surface);
   text-decoration: none;
   font-weight: 600;
 }

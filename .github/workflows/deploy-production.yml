@@ -37,7 +37,7 @@ jobs:
           script: |
             export REPO_URL="${{ secrets.REPO_URL }}"
             export HEALTH_URL="${{ secrets.HEALTH_URL }}"
-            bash /var/www/kavo-production/shared/deploy.sh production main
+            bash /var/www/kaabosh-production/shared/deploy.sh production main
 
       - name: Tag the Sentry release
         if: env.SENTRY_AUTH_TOKEN != ''

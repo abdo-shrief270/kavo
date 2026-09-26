@@ -10,7 +10,7 @@ importers:
 
   apps/admin:
     dependencies:
-      '@kavo/api-client':
+      '@kaabosh/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
       '@sentry/vue':
@@ -47,7 +47,7 @@ importers:
 
   apps/dashboard:
     dependencies:
-      '@kavo/api-client':
+      '@kaabosh/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
       '@sentry/vue':

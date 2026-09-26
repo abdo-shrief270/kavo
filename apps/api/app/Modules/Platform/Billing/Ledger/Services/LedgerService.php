@@ -121,7 +121,7 @@ final readonly class LedgerService implements MerchantLedger
      */
     public function commissionOn(Money $gross): Money
     {
-        $basisPoints = (int) config('kavo.ledger.commission_basis_points', 100);
+        $basisPoints = (int) config('kaabosh.ledger.commission_basis_points', 100);
 
         return new Money(intdiv($gross->amountCents * $basisPoints, 10_000), $gross->currency);
     }
@@ -199,11 +199,11 @@ final readonly class LedgerService implements MerchantLedger
 
     private function ratePercent(): string
     {
-        return rtrim(rtrim(number_format((int) config('kavo.ledger.commission_basis_points', 100) / 100, 2), '0'), '.').'%';
+        return rtrim(rtrim(number_format((int) config('kaabosh.ledger.commission_basis_points', 100) / 100, 2), '0'), '.').'%';
     }
 
     private function currency(): string
     {
-        return (string) config('kavo.ledger.currency', 'EGP');
+        return (string) config('kaabosh.ledger.currency', 'EGP');
     }
 }

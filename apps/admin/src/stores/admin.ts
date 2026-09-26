@@ -1,4 +1,4 @@
-import type { AuthUser } from '@kavo/api-client'
+import type { AuthUser } from '@kaabosh/api-client'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api } from '../api'

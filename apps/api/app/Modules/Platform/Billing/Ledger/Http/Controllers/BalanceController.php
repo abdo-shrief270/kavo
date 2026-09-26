@@ -32,10 +32,10 @@ final class BalanceController
                 // merchant owing the platform, and rounding that up to zero
                 // would hide it.
                 'amount_cents' => $cents,
-                'currency' => (string) config('kavo.ledger.currency', 'EGP'),
+                'currency' => (string) config('kaabosh.ledger.currency', 'EGP'),
                 'overdrawn' => $cents < 0,
             ],
-            'commission_basis_points' => (int) config('kavo.ledger.commission_basis_points', 100),
+            'commission_basis_points' => (int) config('kaabosh.ledger.commission_basis_points', 100),
             'in_flight_cents' => (int) Payout::query()
                 ->where('status', PayoutStatus::Pending->value)
                 ->sum('amount_cents'),

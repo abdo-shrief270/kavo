@@ -78,7 +78,7 @@ final class ObservabilityTest extends TestCase
     #[Test]
     public function arriving_through_a_trusted_proxy_is_not_proof_of_anything(): void
     {
-        config()->set('kavo.internal_token', 'internal-secret');
+        config()->set('kaabosh.internal_token', 'internal-secret');
 
         $response = $this->call('GET', '/api/me', server: [
             'REMOTE_ADDR' => '127.0.0.1',
@@ -98,7 +98,7 @@ final class ObservabilityTest extends TestCase
     #[Test]
     public function a_first_party_caller_keeps_the_trace_across_the_hop(): void
     {
-        config()->set('kavo.internal_token', 'internal-secret');
+        config()->set('kaabosh.internal_token', 'internal-secret');
 
         $response = $this->call('GET', '/api/me', server: [
             'REMOTE_ADDR' => '127.0.0.1',
@@ -113,7 +113,7 @@ final class ObservabilityTest extends TestCase
     #[Test]
     public function an_unconfigured_token_trusts_no_one(): void
     {
-        config()->set('kavo.internal_token', '');
+        config()->set('kaabosh.internal_token', '');
 
         $response = $this->call('GET', '/api/me', server: [
             'REMOTE_ADDR' => '127.0.0.1',

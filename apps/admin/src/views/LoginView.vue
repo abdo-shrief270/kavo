@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError } from '@kavo/api-client'
+import { ApiError } from '@kaabosh/api-client'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '../stores/admin'
@@ -39,7 +39,7 @@ async function submit() {
 
 <template>
   <form class="auth" @submit.prevent="submit">
-    <h1>Kavo platform</h1>
+    <h1>Kaabosh platform</h1>
     <p class="hint">Staff access only.</p>
 
     <div class="field">

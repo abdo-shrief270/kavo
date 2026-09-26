@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { UsageMetric } from '@kavo/api-client'
+import type { UsageMetric } from '@kaabosh/api-client'
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 

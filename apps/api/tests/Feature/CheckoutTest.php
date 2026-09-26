@@ -282,8 +282,8 @@ final class CheckoutTest extends TestCase
     public function a_declined_card_gives_the_stock_straight_back(): void
     {
         config([
-            'kavo.payments.rails.card' => 'declining',
-            'kavo.payments.gateways.declining' => DecliningGateway::class,
+            'kaabosh.payments.rails.card' => 'declining',
+            'kaabosh.payments.gateways.declining' => DecliningGateway::class,
         ]);
 
         $response = $this->storefront('POST', '/checkout', $this->details('card'), token: $this->fillCart(2));
@@ -647,7 +647,7 @@ final class CheckoutTest extends TestCase
 
         return $this->withHeaders($headers)->json(
             $method,
-            'http://'.$this->tenant->slug.'.'.config('kavo.root_domain').'/api/storefront'.$path,
+            'http://'.$this->tenant->slug.'.'.config('kaabosh.root_domain').'/api/storefront'.$path,
             $body,
         );
     }

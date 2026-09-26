@@ -15,8 +15,8 @@ STAMP="${1:?usage: postgres-restore.sh <backup-stamp|latest> <target-data-dir> [
 TARGET_DIR="${2:?usage: postgres-restore.sh <backup-stamp|latest> <target-data-dir> [recovery-target-time]}"
 RECOVERY_TARGET_TIME="${3:-}"
 
-BACKUP_ROOT="${KAVO_BACKUP_DIR:-/var/backups/kavo}"
-WAL_ARCHIVE="${KAVO_WAL_ARCHIVE_DIR:-/var/backups/kavo/wal}"
+BACKUP_ROOT="${KAABOSH_BACKUP_DIR:-/var/backups/kaabosh}"
+WAL_ARCHIVE="${KAABOSH_WAL_ARCHIVE_DIR:-/var/backups/kaabosh/wal}"
 
 log() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 

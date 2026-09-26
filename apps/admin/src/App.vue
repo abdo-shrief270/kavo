@@ -15,7 +15,7 @@ async function signOut() {
   <div class="shell">
     <aside v-if="admin.isStaff" class="shell__nav">
       <div class="shell__brand">
-        Kavo <span class="shell__badge">platform</span>
+        Kaabosh <span class="shell__badge">platform</span>
       </div>
 
       <nav>

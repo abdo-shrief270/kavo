@@ -74,7 +74,7 @@ final class InboundWebhookController
 
     private function verifierFor(string $provider): ?WebhookVerifier
     {
-        $verifiers = config('kavo.webhooks.verifiers', []);
+        $verifiers = config('kaabosh.webhooks.verifiers', []);
 
         if (! array_key_exists($provider, $verifiers)) {
             return null;

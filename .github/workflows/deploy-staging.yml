@@ -25,4 +25,4 @@ jobs:
           script: |
             export REPO_URL="${{ secrets.REPO_URL }}"
             export HEALTH_URL="${{ secrets.HEALTH_URL }}"
-            bash /var/www/kavo-staging/shared/deploy.sh staging develop
+            bash /var/www/kaabosh-staging/shared/deploy.sh staging develop

@@ -43,7 +43,7 @@ final class TenantAdminController
     {
         $audit->recordPlatformAccess('tenant.viewed', ['tenant_id' => $tenant->getKey()]);
 
-        $owner = config('kavo.tenancy.owner_connection');
+        $owner = config('kaabosh.tenancy.owner_connection');
 
         return response()->json([
             'tenant' => $tenant->load('users'),

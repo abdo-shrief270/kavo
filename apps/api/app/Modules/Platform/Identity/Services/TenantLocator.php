@@ -23,7 +23,7 @@ final class TenantLocator
 {
     public function byHostname(string $hostname): ?Tenant
     {
-        $root = (string) config('kavo.root_domain');
+        $root = (string) config('kaabosh.root_domain');
 
         if ($tenant = $this->byCustomDomain($hostname)) {
             return $tenant;

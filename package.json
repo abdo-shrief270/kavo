@@ -1,14 +1,14 @@
 {
-    "name": "kavo",
+    "name": "kaabosh",
     "private": true,
     "packageManager": "pnpm@10.33.0",
     "engines": {
         "node": ">=22"
     },
     "scripts": {
-        "dev:storefront": "pnpm --filter @kavo/storefront dev",
-        "dev:dashboard": "pnpm --filter @kavo/dashboard dev",
-        "dev:admin": "pnpm --filter @kavo/admin dev",
+        "dev:storefront": "pnpm --filter @kaabosh/storefront dev",
+        "dev:dashboard": "pnpm --filter @kaabosh/dashboard dev",
+        "dev:admin": "pnpm --filter @kaabosh/admin dev",
         "build": "pnpm -r build",
         "lint": "pnpm -r lint",
         "typecheck": "pnpm -r typecheck",

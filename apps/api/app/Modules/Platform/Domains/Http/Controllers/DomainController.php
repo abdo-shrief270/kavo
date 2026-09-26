@@ -43,7 +43,7 @@ final class DomainController
             'domain' => $domain,
             'dns_record' => [
                 'type' => 'TXT',
-                'name' => '_kavo-challenge.'.$domain->hostname,
+                'name' => '_kaabosh-challenge.'.$domain->hostname,
                 'value' => $domain->expectedDnsRecord(),
             ],
         ], 201);

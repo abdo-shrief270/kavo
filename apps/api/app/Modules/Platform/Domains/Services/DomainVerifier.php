@@ -20,7 +20,7 @@ final class DomainVerifier
         $domain->update(['status' => 'verifying']);
 
         $expected = $domain->expectedDnsRecord();
-        $records = $this->lookupTxt('_kavo-challenge.'.$domain->hostname);
+        $records = $this->lookupTxt('_kaabosh-challenge.'.$domain->hostname);
 
         foreach ($records as $record) {
             if (hash_equals($expected, trim($record))) {

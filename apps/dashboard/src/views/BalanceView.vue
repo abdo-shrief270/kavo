@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LedgerEntry, Paginated, Payout } from '@kavo/api-client'
+import type { LedgerEntry, Paginated, Payout } from '@kaabosh/api-client'
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useMoney } from '../composables/useMoney'

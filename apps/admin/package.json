@@ -1,5 +1,5 @@
 {
-    "name": "@kavo/admin",
+    "name": "@kaabosh/admin",
     "private": true,
     "type": "module",
     "scripts": {
@@ -10,7 +10,7 @@
         "lint": "eslint ."
     },
     "dependencies": {
-        "@kavo/api-client": "workspace:*",
+        "@kaabosh/api-client": "workspace:*",
         "@sentry/vue": "^10.74.0",
         "pinia": "^2.2.0",
         "vue": "^3.5.0",

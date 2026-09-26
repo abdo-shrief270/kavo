@@ -79,7 +79,7 @@ class HmacWebhookVerifier implements WebhookVerifier
             return false;
         }
 
-        $tolerance = (int) config('kavo.webhooks.inbound.tolerance_seconds', 300);
+        $tolerance = (int) config('kaabosh.webhooks.inbound.tolerance_seconds', 300);
 
         return abs(time() - (int) $timestamp) <= $tolerance;
     }

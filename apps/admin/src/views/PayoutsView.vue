@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError, type LedgerEntry, type Payout, type TenantBalance } from '@kavo/api-client'
+import { ApiError, type LedgerEntry, type Payout, type TenantBalance } from '@kaabosh/api-client'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api } from '../api'
 import { useMoney } from '../composables/useMoney'

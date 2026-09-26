@@ -88,15 +88,15 @@ final class OutboundWebhookDeliveryTest extends TestCase
         $this->assertSame(1, $delivery->attempt);
 
         Http::assertSent(function ($request): bool {
-            $timestamp = $request->header('X-Kavo-Timestamp')[0] ?? '';
-            $signature = $request->header('X-Kavo-Signature')[0] ?? '';
+            $timestamp = $request->header('X-Kaabosh-Timestamp')[0] ?? '';
+            $signature = $request->header('X-Kaabosh-Signature')[0] ?? '';
 
             // The timestamp is part of the signed string, so a payload
             // captured once cannot be replayed against the tenant later.
             $expected = hash_hmac('sha256', $timestamp.'.'.$request->body(), 'shared-secret');
 
             return hash_equals($expected, $signature)
-                && ($request->header('X-Kavo-Event')[0] ?? '') === 'order.placed';
+                && ($request->header('X-Kaabosh-Event')[0] ?? '') === 'order.placed';
         });
     }
 
@@ -144,7 +144,7 @@ final class OutboundWebhookDeliveryTest extends TestCase
         Http::fake(['*' => Http::response('nope', 500)]);
         Queue::fake();
 
-        $backoff = (array) config('kavo.webhooks.outbound.backoff');
+        $backoff = (array) config('kaabosh.webhooks.outbound.backoff');
         $delivery = $this->deliver();
 
         // One more attempt than the backoff schedule allows.
@@ -169,8 +169,8 @@ final class OutboundWebhookDeliveryTest extends TestCase
         Http::fake(['*' => Http::response('nope', 500)]);
         Queue::fake();
 
-        $threshold = (int) config('kavo.webhooks.outbound.disable_after_consecutive_failures');
-        $backoff = (array) config('kavo.webhooks.outbound.backoff');
+        $threshold = (int) config('kaabosh.webhooks.outbound.disable_after_consecutive_failures');
+        $backoff = (array) config('kaabosh.webhooks.outbound.backoff');
 
         for ($n = 0; $n < $threshold; $n++) {
             $delivery = $this->deliver();

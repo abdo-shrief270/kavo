@@ -46,6 +46,6 @@ final class Domain extends Model
     /** The DNS TXT record the tenant adds to prove control of the hostname. */
     public function expectedDnsRecord(): string
     {
-        return 'kavo-verification='.$this->verification_token;
+        return 'kaabosh-verification='.$this->verification_token;
     }
 }

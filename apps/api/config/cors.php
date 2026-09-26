@@ -47,7 +47,7 @@ return [
      | them would mean trusting a list this file cannot see.
      */
     'allowed_origins_patterns' => [
-        '#^https?://[a-z0-9-]+\.'.preg_quote((string) env('KAVO_ROOT_DOMAIN', 'kavo.test'), '#').'(:\d+)?$#i',
+        '#^https?://[a-z0-9-]+\.'.preg_quote((string) env('KAABOSH_ROOT_DOMAIN', 'kaabosh.test'), '#').'(:\d+)?$#i',
     ],
 
     /*

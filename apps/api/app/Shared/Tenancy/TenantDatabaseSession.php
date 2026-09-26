@@ -87,7 +87,7 @@ final readonly class TenantDatabaseSession
             return null;
         }
 
-        $value = $connection->scalar('SELECT current_setting(?, true)', [config('kavo.tenancy.guc')]);
+        $value = $connection->scalar('SELECT current_setting(?, true)', [config('kaabosh.tenancy.guc')]);
 
         return $value === null ? '' : (string) $value;
     }
@@ -105,7 +105,7 @@ final readonly class TenantDatabaseSession
 
     private function setConfig(ConnectionInterface $connection, string $value): void
     {
-        $guc = config('kavo.tenancy.guc');
+        $guc = config('kaabosh.tenancy.guc');
 
         // set_config(..., false) is session-scoped rather than transaction-
         // scoped, so it survives outside an explicit transaction. That is why

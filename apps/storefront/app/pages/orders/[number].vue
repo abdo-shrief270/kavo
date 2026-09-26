@@ -73,7 +73,7 @@ useSeoMeta({ title: () => (order.value ? `Order ${order.value.reference}` : 'Ord
 .order__status { font-size: 1.05rem; opacity: 0.8; }
 
 .order__reference {
-  border: 1px solid var(--kavo-color-primary);
+  border: 1px solid var(--kaabosh-color-primary);
   border-radius: 0.5rem;
   padding: 1rem 1.25rem;
   margin: 1.5rem 0;
@@ -91,7 +91,7 @@ useSeoMeta({ title: () => (order.value ? `Order ${order.value.reference}` : 'Ord
 .order__refresh {
   margin-top: 0.85rem;
   padding: 0.5rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--kavo-color-text) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 25%, transparent);
   border-radius: 0.375rem;
   background: transparent;
   color: inherit;
@@ -105,7 +105,7 @@ useSeoMeta({ title: () => (order.value ? `Order ${order.value.reference}` : 'Ord
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--kavo-color-text) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 12%, transparent);
 }
 
 .order__lines small { opacity: 0.6; }

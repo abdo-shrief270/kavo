@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError, type QuotaDetail } from '@kavo/api-client'
+import { ApiError, type QuotaDetail } from '@kaabosh/api-client'
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useNotificationStore } from '../stores/notifications'

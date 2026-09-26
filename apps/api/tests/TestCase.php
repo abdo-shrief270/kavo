@@ -32,8 +32,8 @@ abstract class TestCase extends BaseTestCase
     /**
      * Migrations run as the schema owner, never as the application role.
      *
-     * This mirrors production exactly: kavo_app has no DDL rights and cannot
-     * bypass RLS, so if the suite could migrate as kavo_app the tests would
+     * This mirrors production exactly: kaabosh_app has no DDL rights and cannot
+     * bypass RLS, so if the suite could migrate as kaabosh_app the tests would
      * be running with privileges the real application never has.
      *
      * @return array<string, string|bool>

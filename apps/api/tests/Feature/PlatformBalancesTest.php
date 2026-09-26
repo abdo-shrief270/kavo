@@ -39,7 +39,7 @@ final class PlatformBalancesTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection(config('kavo.tenancy.owner_connection'))->unprepared(
+        DB::connection(config('kaabosh.tenancy.owner_connection'))->unprepared(
             'truncate ledger_entries, payouts, tenant_user, users, tenants restart identity cascade',
         );
 

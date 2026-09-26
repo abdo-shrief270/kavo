@@ -20,7 +20,7 @@ use Illuminate\Console\Command;
  */
 final class ExpireOverduePayments extends Command
 {
-    protected $signature = 'kavo:expire-payments';
+    protected $signature = 'kaabosh:expire-payments';
 
     protected $description = 'Expire payment intents whose offline window has closed';
 

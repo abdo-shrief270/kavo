@@ -139,7 +139,7 @@ useSeoMeta({
 .product__image {
   width: 100%;
   border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--kavo-color-text) 6%, transparent);
+  background: color-mix(in srgb, var(--kaabosh-color-text) 6%, transparent);
 }
 
 .product__image--empty { aspect-ratio: 3 / 4; }
@@ -168,7 +168,7 @@ useSeoMeta({
 
 .product__value {
   padding: 0.5rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--kavo-color-text) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 25%, transparent);
   border-radius: 0.375rem;
   background: transparent;
   color: inherit;
@@ -177,9 +177,9 @@ useSeoMeta({
 }
 
 .product__value--on {
-  border-color: var(--kavo-color-primary);
-  background: var(--kavo-color-primary);
-  color: var(--kavo-color-surface);
+  border-color: var(--kaabosh-color-primary);
+  background: var(--kaabosh-color-primary);
+  color: var(--kaabosh-color-surface);
 }
 
 .product__status { opacity: 0.75; }
@@ -190,8 +190,8 @@ useSeoMeta({
   padding: 0.75rem 1.5rem;
   border: 0;
   border-radius: 0.5rem;
-  background: var(--kavo-color-primary);
-  color: var(--kavo-color-surface);
+  background: var(--kaabosh-color-primary);
+  color: var(--kaabosh-color-surface);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

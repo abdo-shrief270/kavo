@@ -107,7 +107,7 @@ final class DatabaseSeeder extends Seeder
 
     private function seedPlatformAdmin(): void
     {
-        User::query()->updateOrCreate(['email' => 'admin@kavo.test'], [
+        User::query()->updateOrCreate(['email' => 'admin@kaabosh.test'], [
             'name' => 'Platform Admin',
             'password' => 'password',
             'is_platform_admin' => true,
@@ -116,7 +116,7 @@ final class DatabaseSeeder extends Seeder
 
     private function seedDemoTenant(): void
     {
-        $owner = User::query()->updateOrCreate(['email' => 'merchant@kavo.test'], [
+        $owner = User::query()->updateOrCreate(['email' => 'merchant@kaabosh.test'], [
             'name' => 'Demo Merchant',
             'password' => 'password',
         ]);

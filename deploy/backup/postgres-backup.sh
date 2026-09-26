@@ -8,13 +8,13 @@
 # parallel compression, point-in-time restore — but this one always runs.
 set -Eeuo pipefail
 
-BACKUP_ROOT="${KAVO_BACKUP_DIR:-/var/backups/kavo}"
-RETAIN_DAYS="${KAVO_BACKUP_RETAIN_DAYS:-7}"
+BACKUP_ROOT="${KAABOSH_BACKUP_DIR:-/var/backups/kaabosh}"
+RETAIN_DAYS="${KAABOSH_BACKUP_RETAIN_DAYS:-7}"
 S3_BUCKET="${BACKUP_S3_BUCKET:-}"
-S3_PREFIX="${BACKUP_S3_PREFIX:-kavo}"
+S3_PREFIX="${BACKUP_S3_PREFIX:-kaabosh}"
 PGHOST="${PGHOST:-127.0.0.1}"
 PGPORT="${PGPORT:-5432}"
-PGUSER="${PGUSER:-kavo_backup}"
+PGUSER="${PGUSER:-kaabosh_backup}"
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 TARGET="${BACKUP_ROOT}/base/${STAMP}"
@@ -51,7 +51,7 @@ pg_basebackup \
 # them has no configuration at all, and the cluster refuses to start.
 #
 # Found by an actual restore drill, which is the only way this surfaces.
-CONFIG_DIR="${KAVO_PG_CONFIG_DIR:-/etc/postgresql/${KAVO_PG_VERSION:-16}/main}"
+CONFIG_DIR="${KAABOSH_PG_CONFIG_DIR:-/etc/postgresql/${KAABOSH_PG_VERSION:-16}/main}"
 
 if [ -d "$CONFIG_DIR" ]; then
   log "Capturing cluster configuration from ${CONFIG_DIR}"

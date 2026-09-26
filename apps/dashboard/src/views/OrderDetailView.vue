@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError, type CustomerAction, type Order, type PaymentSummary } from '@kavo/api-client'
+import { ApiError, type CustomerAction, type Order, type PaymentSummary } from '@kaabosh/api-client'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'

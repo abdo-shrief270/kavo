@@ -64,7 +64,7 @@ final class CatalogueTest extends TestCase
      */
     private function storefront(string $path): TestResponse
     {
-        return $this->getJson('http://'.$this->tenant->slug.'.'.config('kavo.root_domain').'/api/storefront'.$path);
+        return $this->getJson('http://'.$this->tenant->slug.'.'.config('kaabosh.root_domain').'/api/storefront'.$path);
     }
 
     /** @return array<string, mixed> */
@@ -506,7 +506,7 @@ final class CatalogueTest extends TestCase
             '/api/storefront/products',
             server: [
                 'REMOTE_ADDR' => '127.0.0.1',
-                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kavo.root_domain'),
+                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kaabosh.root_domain'),
             ],
         )->assertOk()->assertJsonPath('products.0.name', 'Forwarded');
     }
@@ -526,7 +526,7 @@ final class CatalogueTest extends TestCase
             '/api/storefront/products',
             server: [
                 'REMOTE_ADDR' => '203.0.113.9',
-                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kavo.root_domain'),
+                'HTTP_X_FORWARDED_HOST' => $this->tenant->slug.'.'.config('kaabosh.root_domain'),
             ],
         )->assertStatus(404);
     }

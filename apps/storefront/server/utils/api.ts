@@ -9,7 +9,7 @@ import type { H3Event } from 'h3'
  * the API expects, which keeps the only credential a shopper has out of
  * JavaScript's reach.
  */
-export const CART_COOKIE = 'kavo_cart'
+export const CART_COOKIE = 'kaabosh_cart'
 
 const CART_COOKIE_DAYS = 30
 

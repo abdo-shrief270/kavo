@@ -383,7 +383,7 @@ final class MerchantLedgerTest extends TestCase
     {
         return $this->withHeaders($token === null ? [] : ['X-Cart-Token' => $token])->json(
             $method,
-            'http://'.$this->tenant->slug.'.'.config('kavo.root_domain').'/api/storefront'.$path,
+            'http://'.$this->tenant->slug.'.'.config('kaabosh.root_domain').'/api/storefront'.$path,
             $body,
         );
     }

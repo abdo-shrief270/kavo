@@ -9,14 +9,14 @@ use App\Modules\Platform\Webhooks\Verifiers\PaymobWebhookVerifier;
 
 return [
     /*
-     | The apex domain tenants get subdomains under, e.g. acme.kavo.test
+     | The apex domain tenants get subdomains under, e.g. acme.kaabosh.test
      */
-    'root_domain' => env('KAVO_ROOT_DOMAIN', 'kavo.test'),
+    'root_domain' => env('KAABOSH_ROOT_DOMAIN', 'kaabosh.test'),
 
     /*
      | Shared secret Caddy presents to the on-demand TLS ask endpoint.
      */
-    'tls_ask_token' => env('KAVO_TLS_ASK_TOKEN'),
+    'tls_ask_token' => env('KAABOSH_TLS_ASK_TOKEN'),
 
     /*
      | Shared secret the storefront's SSR server presents when it calls the
@@ -27,7 +27,7 @@ return [
      | through my proxy" says nothing about who wrote them. Anything the API
      | takes on trust from a caller needs the caller to prove it is ours.
      */
-    'internal_token' => env('KAVO_INTERNAL_TOKEN'),
+    'internal_token' => env('KAABOSH_INTERNAL_TOKEN'),
 
     /*
      | Addresses whose X-Forwarded-* headers are believed.
@@ -65,7 +65,7 @@ return [
         'owner_connection' => 'pgsql_owner',
     ],
 
-    'slow_query_ms' => (int) env('KAVO_SLOW_QUERY_MS', 200),
+    'slow_query_ms' => (int) env('KAABOSH_SLOW_QUERY_MS', 200),
 
     'quotas' => [
         /*
@@ -85,10 +85,10 @@ return [
          | actually pays. A rail with no gateway is simply not offered.
          */
         'rails' => [
-            'card' => env('KAVO_CARD_GATEWAY', 'fake'),
-            'wallet' => env('KAVO_WALLET_GATEWAY', 'fake'),
-            'reference' => env('KAVO_REFERENCE_GATEWAY', 'fake'),
-            'cod' => env('KAVO_COD_GATEWAY', 'fake'),
+            'card' => env('KAABOSH_CARD_GATEWAY', 'fake'),
+            'wallet' => env('KAABOSH_WALLET_GATEWAY', 'fake'),
+            'reference' => env('KAABOSH_REFERENCE_GATEWAY', 'fake'),
+            'cod' => env('KAABOSH_COD_GATEWAY', 'fake'),
         ],
 
         'gateways' => [
@@ -101,7 +101,7 @@ return [
          | How long a customer has to pay an issued reference before the
          | order is released. Fawry's own default is 72 hours.
          */
-        'reference_expiry_hours' => (int) env('KAVO_REFERENCE_EXPIRY_HOURS', 72),
+        'reference_expiry_hours' => (int) env('KAABOSH_REFERENCE_EXPIRY_HOURS', 72),
     ],
 
     /*
@@ -115,8 +115,8 @@ return [
      | arithmetic never touches a float. 100 = 1%.
      */
     'ledger' => [
-        'commission_basis_points' => (int) env('KAVO_COMMISSION_BASIS_POINTS', 100),
-        'currency' => env('KAVO_SETTLEMENT_CURRENCY', 'EGP'),
+        'commission_basis_points' => (int) env('KAABOSH_COMMISSION_BASIS_POINTS', 100),
+        'currency' => env('KAABOSH_SETTLEMENT_CURRENCY', 'EGP'),
     ],
 
     'webhooks' => [

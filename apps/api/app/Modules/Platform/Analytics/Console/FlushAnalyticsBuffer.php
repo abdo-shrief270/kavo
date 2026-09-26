@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 
 final class FlushAnalyticsBuffer extends Command
 {
-    protected $signature = 'kavo:flush-analytics';
+    protected $signature = 'kaabosh:flush-analytics';
 
     protected $description = 'Batch-insert buffered analytics events into Postgres';
 

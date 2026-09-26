@@ -31,7 +31,7 @@ final readonly class ProvisionTenant
 
     public function handle(User $owner, string $name, Product $product, ?string $planCode = null): Tenant
     {
-        return DB::connection(config('kavo.tenancy.owner_connection'))->transaction(function () use ($owner, $name, $product, $planCode): Tenant {
+        return DB::connection(config('kaabosh.tenancy.owner_connection'))->transaction(function () use ($owner, $name, $product, $planCode): Tenant {
             $plan = $planCode === null
                 ? Plan::query()->where('product', $product->value)->where('is_active', true)->orderBy('sort_order')->first()
                 : Plan::query()->where('code', $planCode)->first();

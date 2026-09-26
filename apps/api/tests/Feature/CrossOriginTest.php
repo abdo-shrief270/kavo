@@ -23,7 +23,7 @@ final class CrossOriginTest extends TestCase
 {
     private function dashboard(): string
     {
-        return (string) config('kavo.frontend.dashboard');
+        return (string) config('kaabosh.frontend.dashboard');
     }
 
     #[Test]
@@ -91,7 +91,7 @@ final class CrossOriginTest extends TestCase
     #[Test]
     public function a_storefront_subdomain_is_allowed(): void
     {
-        $origin = 'https://acme.'.config('kavo.root_domain');
+        $origin = 'https://acme.'.config('kaabosh.root_domain');
 
         $response = $this->call('GET', '/api/storefront/config', server: ['HTTP_ORIGIN' => $origin]);
 
@@ -103,7 +103,7 @@ final class CrossOriginTest extends TestCase
     public function a_lookalike_of_the_apex_is_not_allowed(): void
     {
         $response = $this->call('GET', '/api/me', server: [
-            'HTTP_ORIGIN' => 'https://acme.'.config('kavo.root_domain').'.evil.test',
+            'HTTP_ORIGIN' => 'https://acme.'.config('kaabosh.root_domain').'.evil.test',
         ]);
 
         $this->assertNull($response->headers->get('Access-Control-Allow-Origin'));

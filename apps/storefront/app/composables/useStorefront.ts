@@ -38,7 +38,7 @@ export function useStorefront() {
 
     for (const [group, values] of Object.entries(tokens)) {
       for (const [name, value] of Object.entries(values ?? {})) {
-        vars[`--kavo-${group}-${name}`] = String(value)
+        vars[`--kaabosh-${group}-${name}`] = String(value)
       }
     }
 

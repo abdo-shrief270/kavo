@@ -36,8 +36,8 @@ sudo -u postgres psql -f deploy/backup/01-backup-role.sql
 
 # 3. Schedule. Base backup nightly, WAL streams continuously.
 sudo crontab -e
-#   0 2 * * *  /var/www/kavo-production/current/deploy/backup/postgres-backup.sh
-#   0 4 * * 0  /var/www/kavo-production/current/deploy/backup/restore-drill.sh
+#   0 2 * * *  /var/www/kaabosh-production/current/deploy/backup/postgres-backup.sh
+#   0 4 * * 0  /var/www/kaabosh-production/current/deploy/backup/restore-drill.sh
 ```
 
 `pg_receivewal` runs under Supervisor, not cron — it is a long-lived stream,

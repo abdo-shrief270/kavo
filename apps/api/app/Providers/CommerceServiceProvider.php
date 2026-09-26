@@ -53,7 +53,7 @@ final class CommerceServiceProvider extends ServiceProvider
             // Carts hold no stock, so a missed run costs disk, not
             // correctness. Daily is plenty.
             $this->app->make(Schedule::class)
-                ->command('kavo:prune-carts')
+                ->command('kaabosh:prune-carts')
                 ->dailyAt('03:20')
                 ->withoutOverlapping();
         });

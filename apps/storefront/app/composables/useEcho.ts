@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 type Listener = (payload: unknown) => void
 
 /**
- * One WebSocket implementation shared by every Kavo frontend.
+ * One WebSocket implementation shared by every Kaabosh frontend.
  *
  * Two rules this wrapper enforces:
  *  - Sockets drop. Nothing important may depend on the socket alone, so every

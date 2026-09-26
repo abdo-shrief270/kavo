@@ -1,4 +1,4 @@
-import type { AuthUser, TenantSummary } from '@kavo/api-client'
+import type { AuthUser, TenantSummary } from '@kaabosh/api-client'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api } from '../api'
@@ -6,7 +6,7 @@ import { setSentryTenant, setSentryUser } from '../sentry'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
-  const activeSlug = ref<string | null>(localStorage.getItem('kavo:tenant'))
+  const activeSlug = ref<string | null>(localStorage.getItem('kaabosh:tenant'))
   const ready = ref(false)
 
   const currentTenant = computed<TenantSummary | null>(() => {
@@ -45,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function selectTenant(slug: string) {
     activeSlug.value = slug
-    localStorage.setItem('kavo:tenant', slug)
+    localStorage.setItem('kaabosh:tenant', slug)
   }
 
   function clear() {
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
     // behind after sign-out means the next person to use the browser sees
     // another workspace's name in the picker.
     activeSlug.value = null
-    localStorage.removeItem('kavo:tenant')
+    localStorage.removeItem('kaabosh:tenant')
   }
 
   // Keeps error reports tagged with the workspace they came from, including

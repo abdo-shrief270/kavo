@@ -17,7 +17,7 @@ use Throwable;
  */
 final class SlowQueries extends Command
 {
-    protected $signature = 'kavo:slow-queries {--limit=15} {--by=total : total|mean|calls}';
+    protected $signature = 'kaabosh:slow-queries {--limit=15} {--by=total : total|mean|calls}';
 
     protected $description = 'Show the slowest queries recorded by pg_stat_statements';
 
@@ -30,7 +30,7 @@ final class SlowQueries extends Command
         };
 
         try {
-            $rows = DB::connection(config('kavo.tenancy.owner_connection'))->select(
+            $rows = DB::connection(config('kaabosh.tenancy.owner_connection'))->select(
                 "SELECT calls,
                         round(total_exec_time::numeric, 1) AS total_ms,
                         round(mean_exec_time::numeric, 2) AS mean_ms,

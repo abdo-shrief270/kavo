@@ -38,14 +38,14 @@
           Postgres, not SQLite. Half of tenant isolation is enforced by
           row-level security, which SQLite does not have — running these
           against SQLite would make the isolation suite pass while proving
-          nothing. Tests connect as kavo_app so policies apply to them
+          nothing. Tests connect as kaabosh_app so policies apply to them
           exactly as they do in production.
         -->
         <env name="DB_CONNECTION" value="pgsql"/>
-        <env name="DB_DATABASE" value="kavo_test"/>
-        <env name="DB_USERNAME" value="kavo_app"/>
+        <env name="DB_DATABASE" value="kaabosh_test"/>
+        <env name="DB_USERNAME" value="kaabosh_app"/>
         <env name="DB_PASSWORD" value="secret"/>
-        <env name="DB_OWNER_USERNAME" value="kavo_owner"/>
+        <env name="DB_OWNER_USERNAME" value="kaabosh_owner"/>
         <env name="DB_OWNER_PASSWORD" value="secret"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>

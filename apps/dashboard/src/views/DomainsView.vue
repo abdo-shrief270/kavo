@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError } from '@kavo/api-client'
+import { ApiError } from '@kaabosh/api-client'
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 

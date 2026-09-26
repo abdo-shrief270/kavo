@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Paginated, Product } from '@kavo/api-client'
+import type { Paginated, Product } from '@kaabosh/api-client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useMoney } from '../composables/useMoney'

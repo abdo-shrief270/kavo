@@ -11,7 +11,7 @@
 # paths, and those run for real here.
 set -Eeuo pipefail
 
-ROOT="${1:-/var/tmp/kavo-deploy-rehearsal}"
+ROOT="${1:-/var/tmp/kaabosh-deploy-rehearsal}"
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/deploy.sh"
 FAKE_REPO="${ROOT}/fake-repo"
 DEPLOY_PATH="${ROOT}/deploy"
@@ -35,15 +35,15 @@ rm -rf "$ROOT"; mkdir -p "$FAKE_REPO/apps/api" "$DEPLOY_PATH/shared/storage"
 printf 'ok' > "$HEALTH_FILE"
 
 run_deploy() {
-  KAVO_DEPLOY_PATH="$DEPLOY_PATH" \
+  KAABOSH_DEPLOY_PATH="$DEPLOY_PATH" \
   REPO_URL="$FAKE_REPO" \
   HEALTH_URL="file://${HEALTH_FILE}" \
-  KAVO_KEEP_RELEASES="${KEEP:-3}" \
-  KAVO_FPM_RELOAD="true" \
-  KAVO_REVERB_RESTART="true" \
-  KAVO_COMPOSER_INSTALL="true" \
-  KAVO_ASSET_BUILD="true" \
-  KAVO_ARTISAN="true" \
+  KAABOSH_KEEP_RELEASES="${KEEP:-3}" \
+  KAABOSH_FPM_RELOAD="true" \
+  KAABOSH_REVERB_RESTART="true" \
+  KAABOSH_COMPOSER_INSTALL="true" \
+  KAABOSH_ASSET_BUILD="true" \
+  KAABOSH_ARTISAN="true" \
   bash "$SCRIPT" rehearsal main
 }
 

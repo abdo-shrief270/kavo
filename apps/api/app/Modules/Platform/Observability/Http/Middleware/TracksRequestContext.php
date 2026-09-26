@@ -78,7 +78,7 @@ final class TracksRequestContext
      */
     private function fromKnownAddress(Request $request): bool
     {
-        $proxies = (array) config('kavo.trusted_proxies', []);
+        $proxies = (array) config('kaabosh.trusted_proxies', []);
         $ip = (string) $request->server->get('REMOTE_ADDR', '');
 
         return $proxies !== [] && $ip !== '' && IpUtils::checkIp($ip, $proxies);
@@ -86,7 +86,7 @@ final class TracksRequestContext
 
     private function isFirstParty(Request $request): bool
     {
-        $expected = (string) config('kavo.internal_token');
+        $expected = (string) config('kaabosh.internal_token');
 
         return $expected !== '' && hash_equals($expected, (string) $request->header('X-Internal-Token', ''));
     }

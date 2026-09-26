@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
  *  1. The application role must not own these tables. Owners bypass RLS
  *     unless FORCE ROW LEVEL SECURITY is set — it is set below, and the roles
  *     are split anyway so migrations and requests use different identities.
- *  2. The application role must not hold BYPASSRLS. kavo_app is created
- *     NOBYPASSRLS and is not a superuser. The migration role kavo_owner does
+ *  2. The application role must not hold BYPASSRLS. kaabosh_app is created
+ *     NOBYPASSRLS and is not a superuser. The migration role kaabosh_owner does
  *     hold BYPASSRLS, deliberately: FORCE applies policies to the owner too,
  *     which would otherwise block legitimate expand/contract backfills across
  *     tenants. See deploy/sql/01-provision-roles.sql.
@@ -108,7 +108,7 @@ return new class extends Migration
      */
     private function protectAuditLogs(): void
     {
-        $guc = config('kavo.tenancy.guc');
+        $guc = config('kaabosh.tenancy.guc');
 
         DB::statement('ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY');
         DB::statement('ALTER TABLE audit_logs FORCE ROW LEVEL SECURITY');
@@ -133,7 +133,7 @@ return new class extends Migration
         DB::statement("ALTER TABLE {$table} FORCE ROW LEVEL SECURITY");
         DB::statement("DROP POLICY IF EXISTS tenant_isolation ON {$table}");
 
-        $guc = config('kavo.tenancy.guc');
+        $guc = config('kaabosh.tenancy.guc');
 
         // NULLIF(..., '') means an unset or cleared GUC yields NULL, and
         // `tenant_id = NULL` matches nothing. A connection that lost its

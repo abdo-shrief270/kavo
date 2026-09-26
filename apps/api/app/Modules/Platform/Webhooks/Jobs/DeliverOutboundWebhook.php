@@ -86,10 +86,10 @@ final class DeliverOutboundWebhook implements ShouldQueue
             $response = $http
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'X-Kavo-Event' => $delivery->event_type,
-                    'X-Kavo-Delivery' => (string) $delivery->id,
-                    'X-Kavo-Timestamp' => $timestamp,
-                    'X-Kavo-Signature' => $signature,
+                    'X-Kaabosh-Event' => $delivery->event_type,
+                    'X-Kaabosh-Delivery' => (string) $delivery->id,
+                    'X-Kaabosh-Timestamp' => $timestamp,
+                    'X-Kaabosh-Signature' => $signature,
                 ])
                 ->timeout(15)
                 // A 302 to http://169.254.169.254/ is the cheapest way around
@@ -148,7 +148,7 @@ final class DeliverOutboundWebhook implements ShouldQueue
 
     private function recordFailure(WebhookDelivery $delivery, int $attempt, ?int $status, string $body): void
     {
-        $backoff = (array) config('kavo.webhooks.outbound.backoff', [30, 120, 600, 3600, 21600]);
+        $backoff = (array) config('kaabosh.webhooks.outbound.backoff', [30, 120, 600, 3600, 21600]);
 
         // Attempts are exhausted: dead-letter rather than retry forever. The
         // row stays in the dashboard so the tenant can fix their endpoint and
@@ -195,7 +195,7 @@ final class DeliverOutboundWebhook implements ShouldQueue
         }
 
         $failures = $subscription->consecutive_failures + 1;
-        $threshold = (int) config('kavo.webhooks.outbound.disable_after_consecutive_failures', 10);
+        $threshold = (int) config('kaabosh.webhooks.outbound.disable_after_consecutive_failures', 10);
 
         $subscription->update([
             'consecutive_failures' => $failures,

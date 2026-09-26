@@ -25,7 +25,7 @@ final class PaymentGatewayManager
 
     public function for(PaymentRail $rail): PaymentGateway
     {
-        $configured = config('kavo.payments.rails.'.$rail->value);
+        $configured = config('kaabosh.payments.rails.'.$rail->value);
 
         if ($configured === null) {
             throw new RuntimeException("No gateway is configured for the {$rail->value} rail.");
@@ -64,7 +64,7 @@ final class PaymentGatewayManager
 
     private function make(string $name): PaymentGateway
     {
-        $class = config('kavo.payments.gateways.'.$name);
+        $class = config('kaabosh.payments.gateways.'.$name);
 
         if ($class === null) {
             throw new RuntimeException("Unknown payment gateway [{$name}].");

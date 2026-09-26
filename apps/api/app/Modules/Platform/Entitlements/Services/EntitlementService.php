@@ -113,7 +113,7 @@ final class EntitlementService implements Entitlements
 
         $percent = ($used / $limit) * 100;
 
-        foreach ((array) config('kavo.quotas.alert_thresholds', [80, 100]) as $threshold) {
+        foreach ((array) config('kaabosh.quotas.alert_thresholds', [80, 100]) as $threshold) {
             if ($percent < $threshold) {
                 continue;
             }

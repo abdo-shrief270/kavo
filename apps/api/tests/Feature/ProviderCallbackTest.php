@@ -262,7 +262,7 @@ final class ProviderCallbackTest extends TestCase
     #[Test]
     public function caddy_can_present_the_ask_token_the_only_way_it_can_send_it(): void
     {
-        config()->set('kavo.tls_ask_token', 'ask-token');
+        config()->set('kaabosh.tls_ask_token', 'ask-token');
 
         $tenant = Tenant::factory()->create();
         $this->asTenant($tenant, fn () => Domain::factory()->active()->create([
@@ -277,7 +277,7 @@ final class ProviderCallbackTest extends TestCase
     #[Test]
     public function the_ask_endpoint_refuses_without_the_token(): void
     {
-        config()->set('kavo.tls_ask_token', 'ask-token');
+        config()->set('kaabosh.tls_ask_token', 'ask-token');
 
         $this->get('/internal/tls-ask?domain=shop.example.com')->assertStatus(403);
         $this->get('/internal/tls-ask?token=wrong&domain=shop.example.com')->assertStatus(403);
@@ -286,7 +286,7 @@ final class ProviderCallbackTest extends TestCase
     #[Test]
     public function the_ask_endpoint_refuses_a_hostname_nobody_registered(): void
     {
-        config()->set('kavo.tls_ask_token', 'ask-token');
+        config()->set('kaabosh.tls_ask_token', 'ask-token');
 
         // The gate that actually matters: with the token known, an unknown
         // hostname still gets no certificate.
@@ -296,7 +296,7 @@ final class ProviderCallbackTest extends TestCase
     #[Test]
     public function an_unconfigured_ask_token_refuses_everything(): void
     {
-        config()->set('kavo.tls_ask_token', '');
+        config()->set('kaabosh.tls_ask_token', '');
 
         $this->get('/internal/tls-ask?token=&domain=shop.example.com')->assertStatus(403);
     }

@@ -21,7 +21,7 @@ final class PlatformMetricsController
     {
         $audit->recordPlatformAccess('metrics.viewed');
 
-        $db = DB::connection(config('kavo.tenancy.owner_connection'));
+        $db = DB::connection(config('kaabosh.tenancy.owner_connection'));
 
         return response()->json([
             'tenants' => [

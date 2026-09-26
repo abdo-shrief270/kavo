@@ -79,7 +79,7 @@ final class BufferedAnalyticsIngestor implements AnalyticsIngestor
             }
 
             if ($rows !== []) {
-                DB::connection(config('kavo.tenancy.owner_connection'))
+                DB::connection(config('kaabosh.tenancy.owner_connection'))
                     ->table('analytics_events')
                     ->insert($rows);
 

@@ -79,9 +79,10 @@ and `github.com/verto` are all taken, as is every clean variant tested (`verta`,
 `vertix`, `vertek`, `vertio`, `vertis`, `vertum`, `vertana`, `vertiva`, `verso`, `vertly`,
 `vertify`). Only `getverto.com` and `usverto.com` survived.
 
-**Kavo** — the earlier working name, from the original repository name. `kavohq.com` and
-`github.com/kavohq` are both free if it is ever revisited, but `kavo.com` is KaVo Dental
-(Envista), a large and actively-policing rights-holder in a different class.
+**Kavo** — the earlier working name, from the original repository name, and what the
+code said until it was renamed. `kavohq.com` and `github.com/kavohq` are both free if it
+is ever revisited, but `kavo.com` is KaVo Dental (Envista), a large and actively-policing
+rights-holder in a different class — which is a good part of why it was not kept.
 
 ## 5. One thing to be aware of
 
@@ -126,3 +127,50 @@ or registered.
 3. Transfer this repository into the organization.
 4. Environments then follow ADR 0001 §10: `kaabosh.tech` production,
    `stg.kaabosh.tech` staging, `ws.kaabosh.tech` for Reverb.
+
+---
+
+## 8. The rename, as executed
+
+Done on 2026-09-26, after the ledger landed and before the first deploy —
+deliberately in that order, because every item below would have needed a
+migration or a coordinated cutover once anything was running in production.
+
+307 occurrences across 111 files, in three casings (`KAVO`, `Kavo`, `kavo`),
+applied across exactly the tracked file set. What it touched, beyond the
+obvious strings:
+
+| Thing | Before | After |
+|---|---|---|
+| Config file and prefix | `config/kavo.php`, `config('kavo.*')` | `config/kaabosh.php`, `config('kaabosh.*')` |
+| Environment variables | `KAVO_*` | `KAABOSH_*` |
+| Postgres roles | `kavo_owner`, `kavo_app`, `kavo_backup` | `kaabosh_*` |
+| Databases | `kavo`, `kavo_test` | `kaabosh`, `kaabosh_test` |
+| npm scope | `@kavo/*` | `@kaabosh/*` |
+| CSS custom properties | `--kavo-color-*` | `--kaabosh-color-*` |
+| Artisan commands | `kavo:flush-usage`, … | `kaabosh:flush-usage`, … |
+| Outbound webhook headers | `X-Kavo-Signature`, `-Event`, `-Timestamp` | `X-Kaabosh-*` |
+| Domain-verification TXT record | `_kavo-challenge.<host>` | `_kaabosh-challenge.<host>` |
+| WAL archive script | `kavo-archive-wal.sh` | `kaabosh-archive-wal.sh` |
+| Default dev root domain | `kavo.test` | `kaabosh.test` |
+
+The last four are the ones that would have hurt later. The webhook headers and
+the TXT record are a **public contract**: merchants sign against those header
+names and put that record in their own DNS, so changing them after anyone has
+integrated means a deprecation window and a dual-read period. Nobody has
+integrated yet. The archive script name is written into `archive_command` in
+the running cluster's configuration, which is not a thing to change while a
+recovery chain depends on it.
+
+Verified rather than assumed: 306 tests, the 13-assertion deploy rehearsal, all
+four workspaces typechecking and building, and a browser run across the
+storefront and the dashboard — a shop resolving on `acme.kaabosh.test`, a
+merchant signing in and reading their balance, and `--kaabosh-color-primary`
+resolving to a real value. That last check earned its place: the design tokens
+are built in one file and consumed in another, so renaming only one side would
+have rendered every storefront unstyled without erroring anywhere.
+
+**Not done here, because it is not this repository's to do:** the GitHub
+repository is still `abdo-shrief270/kavo`. Renaming it is a settings change on
+GitHub, and GitHub keeps redirecting the old path afterwards, so existing
+clones and the `origin` remote keep working either way. §7 covers the org move.

@@ -15,7 +15,7 @@ async function signOut() {
 <template>
   <div class="shell">
     <aside v-if="auth.isAuthenticated" class="shell__nav">
-      <div class="shell__brand">Kavo</div>
+      <div class="shell__brand">Kaabosh</div>
 
       <select
         v-if="(auth.user?.tenants.length ?? 0) > 1"

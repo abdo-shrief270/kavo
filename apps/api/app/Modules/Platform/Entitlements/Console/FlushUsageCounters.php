@@ -19,7 +19,7 @@ use Illuminate\Console\Command;
  */
 final class FlushUsageCounters extends Command
 {
-    protected $signature = 'kavo:flush-usage';
+    protected $signature = 'kaabosh:flush-usage';
 
     protected $description = 'Flush buffered usage counters from Redis into Postgres';
 

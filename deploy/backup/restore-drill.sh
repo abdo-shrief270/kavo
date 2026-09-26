@@ -13,20 +13,20 @@
 # during the incident.
 set -Eeuo pipefail
 
-DRILL_DIR="${KAVO_DRILL_DIR:-/var/tmp/kavo-restore-drill}"
-DRILL_PORT="${KAVO_DRILL_PORT:-55432}"
-PG_BIN="${KAVO_PG_BIN:-/usr/lib/postgresql/16/bin}"
-DATABASE="${KAVO_DRILL_DATABASE:-kavo}"
+DRILL_DIR="${KAABOSH_DRILL_DIR:-/var/tmp/kaabosh-restore-drill}"
+DRILL_PORT="${KAABOSH_DRILL_PORT:-55432}"
+PG_BIN="${KAABOSH_PG_BIN:-/usr/lib/postgresql/16/bin}"
+DATABASE="${KAABOSH_DRILL_DATABASE:-kaabosh}"
 
 # Below these, the restore is technically successful and practically empty —
 # which is the failure mode a naive "did it start?" check misses entirely.
-MIN_TENANTS="${KAVO_DRILL_MIN_TENANTS:-1}"
+MIN_TENANTS="${KAABOSH_DRILL_MIN_TENANTS:-1}"
 
 # Row-level security must survive a restore. Set to 0 only where the schema
 # under test genuinely has no policies — never for the real database, where a
 # recovered copy that lost its policies is a cross-tenant leak wearing a
 # backup's clothes.
-MIN_POLICIES="${KAVO_DRILL_MIN_POLICIES:-10}"
+MIN_POLICIES="${KAABOSH_DRILL_MIN_POLICIES:-10}"
 
 log() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 

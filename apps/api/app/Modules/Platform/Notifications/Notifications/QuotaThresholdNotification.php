@@ -62,8 +62,8 @@ final class QuotaThresholdNotification extends Notification implements ShouldQue
         return $this->atLimit()
             ? $message
                 ->line('New usage is being blocked until the next period or a plan change.')
-                ->action('Review your plan', rtrim((string) config('kavo.frontend.dashboard'), '/').'/billing')
-            : $message->action('View usage', rtrim((string) config('kavo.frontend.dashboard'), '/').'/');
+                ->action('Review your plan', rtrim((string) config('kaabosh.frontend.dashboard'), '/').'/billing')
+            : $message->action('View usage', rtrim((string) config('kaabosh.frontend.dashboard'), '/').'/');
     }
 
     /** @return array<string, mixed> */

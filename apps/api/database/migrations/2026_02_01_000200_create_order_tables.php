@@ -154,7 +154,7 @@ return new class extends Migration
     /** The same two-layer isolation every tenant table gets. */
     private function protect(string $table): void
     {
-        $guc = config('kavo.tenancy.guc');
+        $guc = config('kaabosh.tenancy.guc');
 
         DB::statement("ALTER TABLE {$table} ENABLE ROW LEVEL SECURITY");
         DB::statement("ALTER TABLE {$table} FORCE ROW LEVEL SECURITY");

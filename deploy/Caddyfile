@@ -12,15 +12,15 @@
 		# The token rides in the query string because `ask` is a bare GET
 		# with no way to set a header. Caddy appends &domain= to whatever
 		# is already here.
-		ask http://127.0.0.1:8000/internal/tls-ask?token={$KAVO_TLS_ASK_TOKEN}
+		ask http://127.0.0.1:8000/internal/tls-ask?token={$KAABOSH_TLS_ASK_TOKEN}
 		interval 2m
 		burst 8
 	}
 }
 
 # Platform surfaces.
-api.{$KAVO_ROOT_DOMAIN} {
-	root * /var/www/kavo-production/current/apps/api/public
+api.{$KAABOSH_ROOT_DOMAIN} {
+	root * /var/www/kaabosh-production/current/apps/api/public
 	php_server
 
 	log {
@@ -33,7 +33,7 @@ api.{$KAVO_ROOT_DOMAIN} {
 
 # Tenant subdomains and verified custom domains. on_demand pairs with the ask
 # endpoint above: only hostnames that reached verifying or active get a cert.
-*.{$KAVO_ROOT_DOMAIN}, https:// {
+*.{$KAABOSH_ROOT_DOMAIN}, https:// {
 	tls {
 		on_demand
 	}
@@ -51,6 +51,6 @@ api.{$KAVO_ROOT_DOMAIN} {
 	}
 }
 
-ws.{$KAVO_ROOT_DOMAIN} {
+ws.{$KAABOSH_ROOT_DOMAIN} {
 	reverse_proxy 127.0.0.1:8080
 }

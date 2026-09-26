@@ -63,18 +63,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -c "CREATE ROLE kavo_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
-          psql -h localhost -U postgres -c "CREATE ROLE kavo_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
-          psql -h localhost -U postgres -c "CREATE DATABASE kavo_test OWNER kavo_owner;"
+          psql -h localhost -U postgres -c "CREATE ROLE kaabosh_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE ROLE kaabosh_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE DATABASE kaabosh_test OWNER kaabosh_owner;"
 
       - name: Verify the app role cannot bypass RLS
         env:
           PGPASSWORD: postgres
         run: |
           result=$(psql -h localhost -U postgres -tAc \
-            "SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname = 'kavo_app'")
+            "SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname = 'kaabosh_app'")
           if [ "$result" != "f" ]; then
-            echo "::error::kavo_app can bypass row-level security. The isolation suite would be vacuous."
+            echo "::error::kaabosh_app can bypass row-level security. The isolation suite would be vacuous."
             exit 1
           fi
 
@@ -159,9 +159,9 @@ jobs:
       - env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -c "CREATE ROLE kavo_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
-          psql -h localhost -U postgres -c "CREATE ROLE kavo_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
-          psql -h localhost -U postgres -c "CREATE DATABASE kavo_test OWNER kavo_owner;"
+          psql -h localhost -U postgres -c "CREATE ROLE kaabosh_owner LOGIN PASSWORD 'secret' CREATEDB BYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE ROLE kaabosh_app LOGIN PASSWORD 'secret' NOBYPASSRLS;"
+          psql -h localhost -U postgres -c "CREATE DATABASE kaabosh_test OWNER kaabosh_owner;"
 
       - run: cp .env.example .env && php artisan key:generate
         working-directory: apps/api

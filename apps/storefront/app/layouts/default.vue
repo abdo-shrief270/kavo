@@ -11,7 +11,7 @@ await load()
 onMounted(() => { refresh() })
 
 useHead(() => ({
-  titleTemplate: (title?: string) => (title ? `${title} · ${tenant.value?.name ?? 'Kavo'}` : (tenant.value?.name ?? 'Kavo')),
+  titleTemplate: (title?: string) => (title ? `${title} · ${tenant.value?.name ?? 'Kaabosh'}` : (tenant.value?.name ?? 'Kaabosh')),
 }))
 </script>
 
@@ -30,23 +30,23 @@ useHead(() => ({
     </main>
 
     <footer class="storefront__footer">
-      <small>Powered by Kavo</small>
+      <small>Powered by Kaabosh</small>
     </footer>
   </div>
 </template>
 
 <style>
 :root {
-  --kavo-color-primary: #111827;
-  --kavo-color-surface: #ffffff;
-  --kavo-color-text: #111827;
+  --kaabosh-color-primary: #111827;
+  --kaabosh-color-surface: #ffffff;
+  --kaabosh-color-text: #111827;
 }
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: var(--kavo-color-surface);
-  color: var(--kavo-color-text);
+  background: var(--kaabosh-color-surface);
+  color: var(--kaabosh-color-text);
 }
 
 .storefront__header {
@@ -73,8 +73,8 @@ body {
   min-width: 1.4rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: var(--kavo-color-primary);
-  color: var(--kavo-color-surface);
+  background: var(--kaabosh-color-primary);
+  color: var(--kaabosh-color-surface);
   font-size: 0.8rem;
   text-align: center;
 }
@@ -82,7 +82,7 @@ body {
 .storefront__brand {
   font-weight: 650;
   font-size: 1.125rem;
-  color: var(--kavo-color-primary);
+  color: var(--kaabosh-color-primary);
   text-decoration: none;
 }
 

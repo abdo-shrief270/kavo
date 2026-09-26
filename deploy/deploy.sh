@@ -17,17 +17,17 @@ set -Eeuo pipefail
 ENVIRONMENT="${1:?usage: deploy.sh <environment> <git-ref>}"
 REF="${2:?usage: deploy.sh <environment> <git-ref>}"
 
-DEPLOY_PATH="${KAVO_DEPLOY_PATH:-/var/www/kavo-${ENVIRONMENT}}"
+DEPLOY_PATH="${KAABOSH_DEPLOY_PATH:-/var/www/kaabosh-${ENVIRONMENT}}"
 REPO_URL="${REPO_URL:?REPO_URL must be set}"
 HEALTH_URL="${HEALTH_URL:?HEALTH_URL must be set}"
-KEEP_RELEASES="${KAVO_KEEP_RELEASES:-5}"
+KEEP_RELEASES="${KAABOSH_KEEP_RELEASES:-5}"
 
 # Host commands, overridable so the script can be rehearsed without root.
-FPM_RELOAD="${KAVO_FPM_RELOAD:-sudo systemctl reload php8.4-fpm}"
-REVERB_RESTART="${KAVO_REVERB_RESTART:-sudo supervisorctl restart kavo-${ENVIRONMENT}-reverb:*}"
-COMPOSER_INSTALL="${KAVO_COMPOSER_INSTALL:-composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist}"
-ASSET_BUILD="${KAVO_ASSET_BUILD:-pnpm install --frozen-lockfile && pnpm -r build}"
-ARTISAN="${KAVO_ARTISAN:-php artisan}"
+FPM_RELOAD="${KAABOSH_FPM_RELOAD:-sudo systemctl reload php8.4-fpm}"
+REVERB_RESTART="${KAABOSH_REVERB_RESTART:-sudo supervisorctl restart kaabosh-${ENVIRONMENT}-reverb:*}"
+COMPOSER_INSTALL="${KAABOSH_COMPOSER_INSTALL:-composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist}"
+ASSET_BUILD="${KAABOSH_ASSET_BUILD:-pnpm install --frozen-lockfile && pnpm -r build}"
+ARTISAN="${KAABOSH_ARTISAN:-php artisan}"
 
 RELEASE="$(date +%Y%m%d%H%M%S)"
 RELEASE_PATH="${DEPLOY_PATH}/releases/${RELEASE}"

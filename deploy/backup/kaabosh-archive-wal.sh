@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Postgres archive_command. Called by the server for each completed WAL
-# segment, as: kavo-archive-wal.sh <path> <filename>
+# segment, as: kaabosh-archive-wal.sh <path> <filename>
 #
 # Two rules this must obey, both enforced below:
 #
@@ -12,15 +12,15 @@
 #      That is the signature of two servers archiving to one location, and
 #      overwriting makes both unrecoverable.
 #
-# Install to /usr/local/bin/kavo-archive-wal.sh, owned by postgres, mode 0755.
+# Install to /usr/local/bin/kaabosh-archive-wal.sh, owned by postgres, mode 0755.
 set -Eeuo pipefail
 
-WAL_PATH="${1:?usage: kavo-archive-wal.sh <path> <filename>}"
-WAL_NAME="${2:?usage: kavo-archive-wal.sh <path> <filename>}"
+WAL_PATH="${1:?usage: kaabosh-archive-wal.sh <path> <filename>}"
+WAL_NAME="${2:?usage: kaabosh-archive-wal.sh <path> <filename>}"
 
-ARCHIVE_DIR="${KAVO_WAL_ARCHIVE_DIR:-/var/backups/kavo/wal}"
+ARCHIVE_DIR="${KAABOSH_WAL_ARCHIVE_DIR:-/var/backups/kaabosh/wal}"
 S3_BUCKET="${BACKUP_S3_BUCKET:-}"
-S3_PREFIX="${BACKUP_S3_PREFIX:-kavo}"
+S3_PREFIX="${BACKUP_S3_PREFIX:-kaabosh}"
 
 mkdir -p "$ARCHIVE_DIR"
 
@@ -33,7 +33,7 @@ if [ -f "$DESTINATION" ]; then
   if cmp -s "$WAL_PATH" "$DESTINATION"; then
     exit 0
   fi
-  echo "kavo-archive-wal: ${WAL_NAME} already archived with different content; refusing to overwrite" >&2
+  echo "kaabosh-archive-wal: ${WAL_NAME} already archived with different content; refusing to overwrite" >&2
   exit 1
 fi
 
@@ -54,7 +54,7 @@ if [ -n "$S3_BUCKET" ]; then
   if ! aws s3 cp --only-show-errors "$DESTINATION" "s3://${S3_BUCKET}/${S3_PREFIX}/wal/${WAL_NAME}"; then
     # Exit non-zero so Postgres retains the segment and retries. Reporting
     # success here would delete the only copy that ever left the box.
-    echo "kavo-archive-wal: upload of ${WAL_NAME} failed" >&2
+    echo "kaabosh-archive-wal: upload of ${WAL_NAME} failed" >&2
     exit 1
   fi
 fi

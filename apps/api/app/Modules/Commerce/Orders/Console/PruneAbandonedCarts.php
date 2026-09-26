@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class PruneAbandonedCarts extends Command
 {
-    protected $signature = 'kavo:prune-carts {--days=7 : Grace period beyond a cart\'s own expiry}';
+    protected $signature = 'kaabosh:prune-carts {--days=7 : Grace period beyond a cart\'s own expiry}';
 
     protected $description = 'Delete carts that expired and were never checked out';
 
@@ -27,7 +27,7 @@ final class PruneAbandonedCarts extends Command
     {
         $cutoff = now()->subDays((int) $this->option('days'));
 
-        $deleted = DB::connection(config('kavo.tenancy.owner_connection'))
+        $deleted = DB::connection(config('kaabosh.tenancy.owner_connection'))
             ->table('carts')
             ->where('expires_at', '<', $cutoff)
             ->delete();

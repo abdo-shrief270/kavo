@@ -128,7 +128,7 @@ useSeoMeta({ title: 'Checkout' })
 .checkout__error { color: #b42318; }
 
 .checkout__group {
-  border: 1px solid color-mix(in srgb, var(--kavo-color-text) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 15%, transparent);
   border-radius: 0.5rem;
   padding: 1rem 1.25rem 1.25rem;
   margin: 0 0 1.25rem;
@@ -149,7 +149,7 @@ useSeoMeta({ title: 'Checkout' })
   width: 100%;
   margin-top: 0.3rem;
   padding: 0.55rem 0.7rem;
-  border: 1px solid color-mix(in srgb, var(--kavo-color-text) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 25%, transparent);
   border-radius: 0.375rem;
   font: inherit;
   box-sizing: border-box;
@@ -159,7 +159,7 @@ useSeoMeta({ title: 'Checkout' })
 .checkout__rail small { display: block; opacity: 0.7; }
 
 .checkout__summary {
-  border-top: 1px solid color-mix(in srgb, var(--kavo-color-text) 15%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--kaabosh-color-text) 15%, transparent);
   padding-top: 1rem;
   margin-bottom: 1.25rem;
 }
@@ -172,8 +172,8 @@ useSeoMeta({ title: 'Checkout' })
   padding: 0.85rem 1.5rem;
   border: 0;
   border-radius: 0.5rem;
-  background: var(--kavo-color-primary);
-  color: var(--kavo-color-surface);
+  background: var(--kaabosh-color-primary);
+  color: var(--kaabosh-color-surface);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

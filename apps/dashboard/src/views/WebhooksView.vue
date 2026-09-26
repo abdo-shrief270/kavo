@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Paginated } from '@kavo/api-client'
+import type { Paginated } from '@kaabosh/api-client'
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 

@@ -86,7 +86,7 @@ useSeoMeta({
   aspect-ratio: 3 / 4;
   object-fit: cover;
   border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--kavo-color-text) 6%, transparent);
+  background: color-mix(in srgb, var(--kaabosh-color-text) 6%, transparent);
 }
 
 .catalogue__name {

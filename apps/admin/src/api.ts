@@ -1,4 +1,4 @@
-import { createClient } from '@kavo/api-client'
+import { createClient } from '@kaabosh/api-client'
 import { useAdminStore } from './stores/admin'
 
 /**

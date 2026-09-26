@@ -1,4 +1,4 @@
-# Kavo
+# Kaabosh
 
 Vertical SaaS platform. One shared foundation, many products: Fashion first,
 then Courses, Beauty and Auto Parts.
@@ -74,7 +74,7 @@ pnpm dev:dashboard    # :5173
 pnpm dev:admin        # :5174
 ```
 
-Seeded accounts: `merchant@kavo.test` / `admin@kavo.test`, password
+Seeded accounts: `merchant@kaabosh.test` / `admin@kaabosh.test`, password
 `password`.
 
 Note the `--database=pgsql_owner` on both commands. The application role has

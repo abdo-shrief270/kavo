@@ -30,5 +30,5 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
 -- Read-only visibility for the application role, so the platform console can
 -- surface slow queries without a second set of credentials.
-GRANT SELECT ON pg_stat_statements TO kavo_app;
-GRANT pg_read_all_stats TO kavo_app;
+GRANT SELECT ON pg_stat_statements TO kaabosh_app;
+GRANT pg_read_all_stats TO kaabosh_app;

@@ -91,7 +91,7 @@ final class AuthAndProvisioningTest extends TestCase
 
         $response = $this->postJson('/api/register', [
             'name' => 'Ada',
-            'email' => 'ada@kavo.test',
+            'email' => 'ada@kaabosh.test',
             'password' => 'Str0ng-Passw0rd!',
             'workspace' => 'Ada Atelier',
             'product' => 'fashion',
@@ -99,7 +99,7 @@ final class AuthAndProvisioningTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('tenant.name', 'Ada Atelier')
-            ->assertJsonPath('user.email', 'ada@kavo.test')
+            ->assertJsonPath('user.email', 'ada@kaabosh.test')
             // Must be false, never null: both SPAs branch on this to decide
             // which console a user belongs in.
             ->assertJsonPath('user.is_platform_admin', false);
@@ -126,7 +126,7 @@ final class AuthAndProvisioningTest extends TestCase
     {
         $this->seedPlan();
 
-        foreach (['a@kavo.test', 'b@kavo.test'] as $email) {
+        foreach (['a@kaabosh.test', 'b@kaabosh.test'] as $email) {
             $this->postJson('/api/register', [
                 'name' => 'Owner',
                 'email' => $email,
@@ -150,10 +150,10 @@ final class AuthAndProvisioningTest extends TestCase
     #[Test]
     public function login_does_not_reveal_whether_an_account_exists(): void
     {
-        User::factory()->create(['email' => 'real@kavo.test', 'password' => 'Str0ng-Passw0rd!']);
+        User::factory()->create(['email' => 'real@kaabosh.test', 'password' => 'Str0ng-Passw0rd!']);
 
-        $wrongPassword = $this->postJson('/api/login', ['email' => 'real@kavo.test', 'password' => 'nope']);
-        $noSuchUser = $this->postJson('/api/login', ['email' => 'ghost@kavo.test', 'password' => 'nope']);
+        $wrongPassword = $this->postJson('/api/login', ['email' => 'real@kaabosh.test', 'password' => 'nope']);
+        $noSuchUser = $this->postJson('/api/login', ['email' => 'ghost@kaabosh.test', 'password' => 'nope']);
 
         $wrongPassword->assertStatus(422);
         $noSuchUser->assertStatus(422);

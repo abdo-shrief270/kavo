@@ -113,7 +113,7 @@ Three details that decide whether this actually works:
 
 1. **The app's DB role must not own the tables.** Table owners bypass RLS unless
    `FORCE ROW LEVEL SECURITY` is set — set it anyway, but also split the roles:
-   `kavo_owner` runs migrations, `kavo_app` runs the application. `kavo_app` gets no
+   `kaabosh_owner` runs migrations, `kaabosh_app` runs the application. `kaabosh_app` gets no
    `SUPERUSER` and no `BYPASSRLS`. Without this split, RLS is decoration.
 2. **Setting the GUC under Octane.** Persistent connections mean a GUC set for tenant A
    is still set when tenant B's request reuses that connection. Set `app.tenant_id` at
@@ -124,7 +124,7 @@ Three details that decide whether this actually works:
    need a documented, audited escape hatch — a separate connection using a role that is
    permitted to bypass, never an ad-hoc `SET`.
 
-CI gains one test: as `kavo_app`, with the GUC set to tenant A, call
+CI gains one test: as `kaabosh_app`, with the GUC set to tenant A, call
 `Order::withoutGlobalScopes()->get()` and assert tenant B's rows are **still** invisible.
 That test is the whole point of the layer.
 
@@ -512,8 +512,8 @@ None carry tenant payload. Everything that does is covered.
 §2 specified splitting the roles so the app role owns nothing. Correct, but
 incomplete: `FORCE ROW LEVEL SECURITY` applies policies to the table owner
 too, which blocks the cross-tenant backfills that expand/contract migrations
-legitimately perform. `kavo_owner` therefore holds `BYPASSRLS` and is never
-used to serve a request; `kavo_app` remains non-owner and `NOBYPASSRLS`. CI
+legitimately perform. `kaabosh_owner` therefore holds `BYPASSRLS` and is never
+used to serve a request; `kaabosh_app` remains non-owner and `NOBYPASSRLS`. CI
 asserts the latter before running the isolation suite, because a suite running
 with privileges production never has would prove nothing.
 
@@ -609,7 +609,7 @@ the same deploy.
 and documents the `postgresql.conf` entries for `log_min_duration_statement`
 and `auto_explain`. This is done at the database rather than only in the
 application because an app-level listener sees only queries the app made, and
-only while the app is healthy. `kavo:slow-queries` surfaces the results,
+only while the app is healthy. `kaabosh:slow-queries` surfaces the results,
 ordered by *total* time by default: a 5 ms query run two million times costs
 more than a 2-second report run once a day.
 
@@ -647,7 +647,7 @@ consequences run through all of it:
   mid-3-D-Secure, and the callback still arrives.
 - **Every open intent has an expiry.** An unpaid reference otherwise holds its
   reservation forever and the catalogue sells out to customers who never paid.
-  `kavo:expire-payments` sweeps hourly and emits `PaymentSettled`, which is the
+  `kaabosh:expire-payments` sweeps hourly and emits `PaymentSettled`, which is the
   seam Commerce will consume in Phase 1 to release stock.
 
 `PaymentStatus::AwaitingOfflinePayment` is a first-class state, and
@@ -783,7 +783,7 @@ the name cannot mean something else a millisecond later. DNS sits behind
 sell.
 
 **`/webhooks/fawry` returned 404.** `FawryWebhookVerifier` existed and was
-never listed in `kavo.webhooks.verifiers`, and an unlisted provider is refused
+never listed in `kaabosh.webhooks.verifiers`, and an unlisted provider is refused
 rather than accepted unverified — correct, and in this case it meant the
 reference rail could never complete a sale. The customer pays at a kiosk with
 no connection to us; the callback is not an optimisation, it is the mechanism.
@@ -1240,7 +1240,7 @@ and searched the order book by customer name — the query that used to 500.
 B10 decided the platform is the merchant of record and named the obligation it
 created: every settled order is a debt to the shop that made it, and nothing
 modelled that direction of money. This is that ledger. The rate is **1%**,
-stored as basis points (`KAVO_COMMISSION_BASIS_POINTS=100`).
+stored as basis points (`KAABOSH_COMMISSION_BASIS_POINTS=100`).
 
 **Entries are append-only, and the model refuses to be otherwise.** A balance
 you can edit is a balance nobody can dispute, and "what did we owe them in

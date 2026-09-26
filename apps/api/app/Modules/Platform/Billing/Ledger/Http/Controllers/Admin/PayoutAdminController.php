@@ -40,7 +40,7 @@ final class PayoutAdminController
     {
         $audit->record('platform.balances_viewed');
 
-        $rows = DB::connection(config('kavo.tenancy.owner_connection'))
+        $rows = DB::connection(config('kaabosh.tenancy.owner_connection'))
             ->table('ledger_entries')
             ->join('tenants', 'tenants.id', '=', 'ledger_entries.tenant_id')
             ->groupBy('tenants.id', 'tenants.name', 'tenants.slug')
@@ -59,7 +59,7 @@ final class PayoutAdminController
                 'slug' => $row->slug,
                 'balance_cents' => (int) $row->balance_cents,
             ])->all(),
-            'currency' => (string) config('kavo.ledger.currency', 'EGP'),
+            'currency' => (string) config('kaabosh.ledger.currency', 'EGP'),
         ]);
     }
 
@@ -68,7 +68,7 @@ final class PayoutAdminController
         return response()->json($context->runAs($tenant, fn (): array => $session->runBound($tenant->getKey(), fn (): array => [
             'tenant' => ['id' => $tenant->getKey(), 'name' => $tenant->name, 'slug' => $tenant->slug],
             'balance_cents' => $ledger->balanceCents($tenant),
-            'currency' => (string) config('kavo.ledger.currency', 'EGP'),
+            'currency' => (string) config('kaabosh.ledger.currency', 'EGP'),
             'entries' => LedgerEntry::query()
                 ->latest('occurred_at')
                 ->latest('id')
@@ -102,7 +102,7 @@ final class PayoutAdminController
 
         $payout = $context->runAs($tenant, fn (): Payout => $session->runBound($tenant->getKey(), fn (): Payout => $payouts->request(
             $tenant,
-            new Money((int) $validated['amount_cents'], (string) config('kavo.ledger.currency', 'EGP')),
+            new Money((int) $validated['amount_cents'], (string) config('kaabosh.ledger.currency', 'EGP')),
             $validated['method'],
             $validated['destination'],
             $validated['notes'] ?? null,

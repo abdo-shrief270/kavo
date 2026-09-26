@@ -98,7 +98,7 @@ final class PlatformServiceProvider extends ServiceProvider
      */
     private function trustTheProxiesInFront(): void
     {
-        TrustProxies::at(config('kavo.trusted_proxies', []));
+        TrustProxies::at(config('kaabosh.trusted_proxies', []));
         TrustProxies::withHeaders(
             HttpRequest::HEADER_X_FORWARDED_FOR
             | HttpRequest::HEADER_X_FORWARDED_HOST
@@ -129,7 +129,7 @@ final class PlatformServiceProvider extends ServiceProvider
             (string) config('services.fawry.base_url'),
             (string) config('services.fawry.merchant_code'),
             (string) config('services.fawry.security_key'),
-            (int) config('kavo.payments.reference_expiry_hours', 72),
+            (int) config('kaabosh.payments.reference_expiry_hours', 72),
         ));
     }
 
@@ -230,15 +230,15 @@ final class PlatformServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             $schedule = $this->app->make(Schedule::class);
 
-            $schedule->command('kavo:flush-usage')->everyMinute()->withoutOverlapping();
-            $schedule->command('kavo:flush-analytics')->everyMinute()->withoutOverlapping();
+            $schedule->command('kaabosh:flush-usage')->everyMinute()->withoutOverlapping();
+            $schedule->command('kaabosh:flush-analytics')->everyMinute()->withoutOverlapping();
 
             // Keeps partition runway ahead of ingestion. The DEFAULT
             // partition means a missed run costs pruning, not data.
-            $schedule->command('kavo:analytics-partitions')->monthlyOn(1, '00:10');
+            $schedule->command('kaabosh:analytics-partitions')->monthlyOn(1, '00:10');
 
             // An unpaid reference left open holds its reservation forever.
-            $schedule->command('kavo:expire-payments')->hourly()->withoutOverlapping();
+            $schedule->command('kaabosh:expire-payments')->hourly()->withoutOverlapping();
         });
     }
 
@@ -294,7 +294,7 @@ final class PlatformServiceProvider extends ServiceProvider
      */
     private function logSlowQueries(): void
     {
-        $threshold = (int) config('kavo.slow_query_ms', 200);
+        $threshold = (int) config('kaabosh.slow_query_ms', 200);
 
         DB::listen(function ($query) use ($threshold): void {
             if ($query->time < $threshold) {

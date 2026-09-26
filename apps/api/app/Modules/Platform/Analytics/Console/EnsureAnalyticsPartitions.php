@@ -16,14 +16,14 @@ use Illuminate\Support\Facades\DB;
  */
 final class EnsureAnalyticsPartitions extends Command
 {
-    protected $signature = 'kavo:analytics-partitions {--months=3 : How many months ahead to create}';
+    protected $signature = 'kaabosh:analytics-partitions {--months=3 : How many months ahead to create}';
 
     protected $description = 'Create upcoming monthly partitions for analytics_events';
 
     public function handle(): int
     {
         $months = max(1, (int) $this->option('months'));
-        $connection = DB::connection(config('kavo.tenancy.owner_connection'));
+        $connection = DB::connection(config('kaabosh.tenancy.owner_connection'));
 
         for ($offset = 0; $offset <= $months; $offset++) {
             $month = now()->startOfMonth()->addMonths($offset);

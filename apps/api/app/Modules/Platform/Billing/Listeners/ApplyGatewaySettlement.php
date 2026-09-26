@@ -34,7 +34,7 @@ final readonly class ApplyGatewaySettlement
     {
         // Every inbound callback arrives here, including ones from providers
         // that have nothing to do with payments.
-        if (! array_key_exists($event->provider, (array) config('kavo.payments.gateways', []))) {
+        if (! array_key_exists($event->provider, (array) config('kaabosh.payments.gateways', []))) {
             return;
         }
 
@@ -95,7 +95,7 @@ final readonly class ApplyGatewaySettlement
      */
     private function tenantFor(string $publicReference, string $gateway): ?Tenant
     {
-        $tenantIds = DB::connection(config('kavo.tenancy.owner_connection'))
+        $tenantIds = DB::connection(config('kaabosh.tenancy.owner_connection'))
             ->table('payment_intents')
             ->where('public_reference', $publicReference)
             ->where('gateway', $gateway)
