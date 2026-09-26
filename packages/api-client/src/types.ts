@@ -180,3 +180,40 @@ export interface PaymentSummary {
   settled_at: string | null
   last_error: string | null
 }
+
+export interface LedgerEntry {
+  id: number
+  type: string
+  /** Human label for the type, from the server — one place decides wording. */
+  label: string
+  /** Signed: positive is owed to the merchant, negative comes off it. */
+  amount_cents: number
+  currency: string
+  description: string
+  source_type: string | null
+  source_id: number | null
+  occurred_at: string
+}
+
+export interface Payout {
+  id: number
+  number: number
+  reference: string
+  status: 'pending' | 'paid' | 'failed'
+  status_label: string
+  amount_cents: number
+  currency: string
+  method: string
+  notes: string | null
+  failure_reason: string | null
+  requested_at: string
+  settled_at: string | null
+}
+
+/** One row of the platform console's "whose money am I holding" screen. */
+export interface TenantBalance {
+  tenant_id: number
+  name: string
+  slug: string
+  balance_cents: number
+}

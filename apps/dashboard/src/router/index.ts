@@ -12,6 +12,7 @@ export const router = createRouter({
     { path: '/products/:id', name: 'product-edit', component: () => import('../views/ProductEditView.vue') },
     { path: '/orders', name: 'orders', component: () => import('../views/OrdersView.vue') },
     { path: '/orders/:id', name: 'order', component: () => import('../views/OrderDetailView.vue') },
+    { path: '/balance', name: 'balance', component: () => import('../views/BalanceView.vue') },
     { path: '/media', name: 'media', component: () => import('../views/MediaView.vue') },
     { path: '/domains', name: 'domains', component: () => import('../views/DomainsView.vue') },
     { path: '/webhooks', name: 'webhooks', component: () => import('../views/WebhooksView.vue') },

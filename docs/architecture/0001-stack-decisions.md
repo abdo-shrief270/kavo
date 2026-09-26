@@ -1306,3 +1306,36 @@ entry violation inside the caller's transaction left the transaction aborted,
 so the *commission* on the very sale being recorded then failed with "current
 transaction is aborted". The insert now runs in a savepoint. Idempotency that
 breaks the write it was protecting is worse than no idempotency at all.
+
+### B13. The two screens the ledger is for
+
+The merchant's **Balance** page — owed, on its way, the commission rate, every
+payout and every entry behind the number — and the platform console's
+**Payouts** page, which answers "whose money am I holding" and is where a
+transfer is recorded, marked arrived, or marked bounced.
+
+Two things the UI had to be honest about, because the ledger is:
+
+- **A negative balance is shown, not floored to zero.** A refund after a payout
+  genuinely leaves a merchant owing the platform. Rounding that up to zero
+  would hide a debt that comes off their next settlement.
+- **"On its way" is its own figure.** The balance drops the moment a payout is
+  created, not when it lands, so a merchant who saw only the balance would
+  think the money had vanished. The in-flight total is what explains it.
+
+Driven in a browser end to end, both dashboards at once: merchant sees
+EGP 2,670.03 owed across four entries; the console reports holding exactly that
+for one shop; a payout is recorded and the merchant's balance drops to zero
+with EGP 2,670.03 in flight; the transfer is marked bounced and the money is
+owed again with nothing in flight. The ledger reads 1% on each sale — 17.98 on
+1,798.00 and 8.99 on 899.00.
+
+Two defects that surfaced only by running it. One in the console: the success
+banner was set *before* the refresh that follows it, and the refresh clears the
+banner as part of resetting the panel — so recording a payout looked like
+nothing had happened. One in the driving script itself, worth recording because
+the same trap will catch the next person: waiting for `table tbody tr` matched
+the "no shops yet" empty-state row, so the assertion read the summary before
+the fetch resolved and reported a balance of zero that was never wrong in the
+app at all. A test that races the code it tests reports defects that do not
+exist, which is only marginally better than missing ones that do.
