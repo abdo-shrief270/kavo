@@ -6,7 +6,7 @@
 # swap, the health gate, rollback after a bad release goes live, and pruning
 # that never deletes the release currently serving.
 #
-# It stubs the host commands (php-fpm, supervisor, composer, pnpm) because
+# It stubs the host commands (the web unit, systemd, composer, pnpm) because
 # those are not what breaks. What breaks is the symlink logic and the failure
 # paths, and those run for real here.
 set -Eeuo pipefail
@@ -39,7 +39,7 @@ run_deploy() {
   REPO_URL="$FAKE_REPO" \
   HEALTH_URL="file://${HEALTH_FILE}" \
   KAABOSH_KEEP_RELEASES="${KEEP:-3}" \
-  KAABOSH_FPM_RELOAD="true" \
+  KAABOSH_WEB_RELOAD="true" \
   KAABOSH_REVERB_RESTART="true" \
   KAABOSH_COMPOSER_INSTALL="true" \
   KAABOSH_ASSET_BUILD="true" \

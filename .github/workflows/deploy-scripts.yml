@@ -30,6 +30,37 @@ jobs:
           # SC1091: sourced files are not present in the checkout.
           find deploy -name '*.sh' -print0 | xargs -0 shellcheck -e SC1091 -S warning
 
+      # The failure this guards is the quietest one in the whole deploy: a
+      # provider secret left blank or still on its local placeholder does not
+      # crash anything, it just makes every signature verification fail.
+      - name: Secrets generator fills what it can and refuses what it cannot
+        run: |
+          set -euo pipefail
+          ./deploy/generate-secrets.sh production > /tmp/generated.env
+
+          if ./deploy/generate-secrets.sh production --check /tmp/generated.env 2>/dev/null; then
+            echo "::error::--check passed a file with every provider value blank"
+            exit 1
+          fi
+
+          for key in PAYMOB_API_KEY PAYMOB_INTEGRATION_ID PAYMOB_IFRAME_ID PAYMOB_HMAC_SECRET \
+                     FAWRY_MERCHANT_CODE FAWRY_SECURITY_KEY BEON_API_KEY BEON_WEBHOOK_SECRET \
+                     SENTRY_LARAVEL_DSN AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_BUCKET; do
+            sed -i "s|^${key}=.*|${key}=filled-$(openssl rand -hex 4)|" /tmp/generated.env
+          done
+          ./deploy/generate-secrets.sh production --check /tmp/generated.env
+
+          sed -i 's|^PAYMOB_HMAC_SECRET=.*|PAYMOB_HMAC_SECRET=local-paymob-hmac-secret|' /tmp/generated.env
+          if ./deploy/generate-secrets.sh production --check /tmp/generated.env 2>/dev/null; then
+            echo "::error::--check passed a file still carrying a local placeholder"
+            exit 1
+          fi
+
+      # Provisioning cannot be rehearsed for real without a server, but it can
+      # be made to state every command it would run before it runs one.
+      - name: Provisioning is readable before it is run
+        run: ./deploy/provision.sh production --dry-run
+
       # The parts that only matter when something goes wrong — the atomic
       # swap, the health gate, rollback after a bad release is already live,
       # and pruning that must never delete the release currently serving.

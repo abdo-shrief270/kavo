@@ -23,8 +23,15 @@ HEALTH_URL="${HEALTH_URL:?HEALTH_URL must be set}"
 KEEP_RELEASES="${KAABOSH_KEEP_RELEASES:-5}"
 
 # Host commands, overridable so the script can be rehearsed without root.
-FPM_RELOAD="${KAABOSH_FPM_RELOAD:-sudo systemctl reload php8.4-fpm}"
-REVERB_RESTART="${KAABOSH_REVERB_RESTART:-sudo supervisorctl restart kaabosh-${ENVIRONMENT}-reverb:*}"
+#
+# FrankenPHP, not php-fpm. The Caddyfile embeds the PHP runtime inside Caddy,
+# so there is no FPM pool on the box at all — `systemctl reload php8.4-fpm`
+# would have failed on the very first production deploy, after the symlink had
+# already swapped, and taken the rollback path with it. Reloading the web unit
+# re-reads the config and swaps workers without dropping a connection, which
+# is what makes the swap zero-downtime.
+WEB_RELOAD="${KAABOSH_WEB_RELOAD:-sudo systemctl reload kaabosh-web}"
+REVERB_RESTART="${KAABOSH_REVERB_RESTART:-sudo systemctl restart kaabosh-${ENVIRONMENT}-reverb}"
 COMPOSER_INSTALL="${KAABOSH_COMPOSER_INSTALL:-composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist}"
 ASSET_BUILD="${KAABOSH_ASSET_BUILD:-pnpm install --frozen-lockfile && pnpm -r build}"
 ARTISAN="${KAABOSH_ARTISAN:-php artisan}"
@@ -53,7 +60,7 @@ rollback() {
   if [ "$SWAPPED" -eq 1 ] && [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ]; then
     log "FAILED after swap — rolling back to $(basename "$PREVIOUS")"
     ln -sfn "$PREVIOUS" "$CURRENT"
-    eval "$FPM_RELOAD" || true
+    eval "$WEB_RELOAD" || true
     log "Rolled back. Release ${RELEASE} kept for inspection."
   else
     log "FAILED before swap — the live release was never touched"
@@ -106,7 +113,7 @@ SWAPPED=1
 # reload, never restart: in-flight requests finish on the old workers while new
 # ones start on the new code. restart drops them.
 log "Refreshing processes"
-eval "$FPM_RELOAD"
+eval "$WEB_RELOAD"
 
 # Signals workers to finish the current job then exit; Supervisor respawns them
 # against the new code. Never kill -9 a worker — that drops in-flight jobs.

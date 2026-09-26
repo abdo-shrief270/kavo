@@ -1339,3 +1339,47 @@ the "no shops yet" empty-state row, so the assertion read the summary before
 the fetch resolved and reported a balance of zero that was never wrong in the
 app at all. A test that races the code it tests reports defects that do not
 exist, which is only marginally better than missing ones that do.
+
+### B14. Provisioning, and the reload command that would have failed once
+
+Two scripts, because the gap between "the deploy pipeline is written" and "a
+server exists that it can deploy to" was entirely manual and entirely
+undocumented.
+
+**`deploy/generate-secrets.sh`** writes a production `.env` and draws a line
+through the middle of it. Above the line are the values nobody hands you —
+`APP_KEY`, the TLS-ask token, the internal token, database passwords, Reverb
+keys — generated here and final. Below it are the ones a third party must
+supply, blank on purpose. `--check` then refuses a file where any of those is
+still empty *or still carries a local placeholder*, because that is the
+quietest failure in the whole deployment: `PAYMOB_HMAC_SECRET=local-paymob-
+hmac-secret` does not crash anything, it just makes every settlement signature
+fail verification forever.
+
+It also refuses `APP_DEBUG=true`, and will not regenerate an `APP_KEY` over an
+existing file — replacing that key makes every encrypted column and every
+session unreadable, which is not a mistake with a recovery path.
+
+**`deploy/provision.sh`** is first-time host setup: PHP, FrankenPHP, Valkey,
+the application user, the release directories, four systemd units and a
+firewall. Deliberately no Postgres — ADR 0001 §8 puts the data tier on its own
+box precisely so a memory spike in a queue worker cannot OOM-kill it.
+
+It cannot be rehearsed for real without a server, so it does the next best
+thing: `--dry-run` prints every command it would run, and CI runs that on every
+change. The firewall opens 80, 443 and SSH and nothing else — Reverb is reached
+through Caddy over the loopback, and the database over the private network.
+
+**The defect this surfaced.** Three files disagreed about what serves PHP. The
+Caddyfile embeds FrankenPHP; `config/octane.php` defaulted to RoadRunner; and
+`deploy.sh` reloaded `php8.4-fpm` — a unit that does not exist on a FrankenPHP
+box, because FrankenPHP *is* the PHP runtime. That reload runs **after** the
+symlink swap, so the very first production deploy would have swapped
+successfully, failed on the reload, and taken the rollback path — rolling back
+a release that was fine. It is now `systemctl reload kaabosh-web`, and the
+rehearsal still passes 13 of 13.
+
+Worth naming as a pattern rather than a one-off: this is the fourth time in
+this project that something written months apart agreed with itself in prose
+and disagreed in fact. The others were the settlement event name, the storefront
+host header, and CORS. None was visible from inside a passing test suite.
